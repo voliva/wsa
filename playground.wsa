@@ -1,0 +1,26 @@
+; ; Hello world
+; include io
+; pushs hello world!
+; call printsln
+
+; ; cat
+; label loop
+; push 1
+; inc
+; retrive 1
+; doub
+; outc
+; jumpnp loop
+
+push 0
+doub
+inn
+retrive
+jumpz correct
+label loop
+push 1
+outn
+jump loop
+label correct
+push 0
+outn
