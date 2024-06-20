@@ -4,7 +4,7 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "start": "node wsa.js",
+    "start": "node main.js",
     "exec": "./bin/exec.sh"
   },
   "keywords": [],

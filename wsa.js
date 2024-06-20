@@ -1,42 +1,4 @@
-#!/usr/bin/env node
-
 import readline from "readline";
-import fs from "fs";
-
-function parseFile(filename) {
-  const file = readline.createInterface({
-    input: fs.createReadStream(filename),
-  });
-
-  let results = [];
-
-  let lineNum = 0;
-  file.on("line", (line) => {
-    lineNum++;
-    line = line.trim();
-    if (line.startsWith(";") || line.length == 0) {
-      return;
-    }
-    const [opcode, ...args] = line.split(" ");
-
-    try {
-      results.push(
-        opcodes[opcode.toLocaleLowerCase()](args.join(" ")) ??
-          Promise.resolve(`{${opcode} ${args.join(" ")}}`)
-      );
-    } catch (ex) {
-      console.error(ex);
-      console.error(`failed at line ${lineNum}: "${line}"`);
-      process.exit(-1);
-    }
-  });
-
-  return new Promise((resolve) => {
-    file.on("close", () =>
-      Promise.all(results).then((r) => resolve(r.join("")))
-    );
-  });
-}
 
 const opcodes = {
   push,
@@ -61,7 +23,6 @@ const opcodes = {
   jumppz,
   jumppn,
   jumpnp: jumppn,
-  include,
   ret,
   exit,
   outn,
@@ -190,12 +151,13 @@ function jumppn(jmpLabel) {
   return [jumpz(s1), jump(jmpLabel), label(s1)].join("");
 }
 
-async function include(filename) {
+async function include(filename, getIncludedStream) {
   const content = await (() => {
     if (filename == "io") {
       // TODO relative to wsa.mjs
-      return parseFile("./lib/io.wsa");
+      return compile(getIncludedStream("./lib/io.wsa"), getIncludedStream);
     }
+    return "TODO";
   })();
   const includeLabel = getInternalLabel();
 
@@ -243,22 +205,46 @@ function valueinteger() {
   return "";
 }
 
-if (!process.argv[2]) {
-  console.log("needs file argument");
-  process.exit(1);
+export function compile(inputStream, getIncludedStream) {
+  const file = readline.createInterface({
+    input: inputStream,
+  });
+
+  let results = [];
+
+  let lineNum = 0;
+  file.on("line", (line) => {
+    lineNum++;
+    line = line.trim();
+    if (line.startsWith(";") || line.length == 0) {
+      return;
+    }
+    let [opcode, ...args] = line.split(" ");
+    opcode = opcode.toLocaleLowerCase();
+    args = args.join(" ");
+
+    try {
+      if (opcode == "include") {
+        results.push(include(args, getIncludedStream));
+      } else {
+        results.push(
+          opcodes[opcode](args) ?? Promise.resolve(`{${opcode} ${args}}`)
+        );
+      }
+    } catch (ex) {
+      console.error(ex);
+      console.error(`failed at line ${lineNum}: "${line}"`);
+      process.exit(-1);
+    }
+  });
+
+  return new Promise((resolve) => {
+    file.on("close", () =>
+      Promise.all(results).then((r) => resolve(r.join("")))
+    );
+  });
 }
 
-const withAnnotations = false;
-parseFile(process.argv[2]).then((res) => {
-  const withExit = `${res}${exit()}`;
-  if (withAnnotations) {
-    process.stdout.write(
-      withExit
-        .replaceAll("\n", "L\n")
-        .replaceAll("\t", "T\t")
-        .replaceAll(" ", "S ")
-    );
-  } else {
-    process.stdout.write(withExit);
-  }
-});
+export async function compileAndExit(inputStream, getIncludedStream) {
+  return (await compile(inputStream, getIncludedStream)) + exit();
+}
