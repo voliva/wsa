@@ -1,18 +1,27 @@
 ; ; Hello world
-; include io
-; pushs hello world!
+include io
+
+pushs hello world!
+call printsln
+
+; ; New hello world. Will be way harder
+; vpush 13
+; call malloc
+; pop
+; doub
+; stores hello world!
+; doub
+; vpush
 ; call printsln
+; pop
+; call free
+; pop
 
-push 0b01001000
-outc
-push 'e'
-outc
-
-; ; cat
+; cat
 ; label loop
-; push 1
+; push 4294967294
 ; inc
-; retrive 1
+; retrive 4294967294
 ; doub
 ; outc
 ; jumpnp loop
