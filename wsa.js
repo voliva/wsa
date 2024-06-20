@@ -74,7 +74,19 @@ const opcodes = {
 };
 
 const valueMap = {};
-const resolveValue = (value) => valueMap[value] ?? value;
+const resolveValue = (value) => {
+  if (value in valueMap) {
+    return valueMap[value];
+  }
+  if (
+    String(value).length === 3 &&
+    String(value).startsWith("'") &&
+    value.endsWith("'")
+  ) {
+    return value.charCodeAt(1);
+  }
+  return value;
+};
 
 const labelMap = {};
 let labelIdx = 0;

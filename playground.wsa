@@ -3,14 +3,19 @@
 ; pushs hello world!
 ; call printsln
 
-; cat
-label loop
-push 1
-inc
-retrive 1
-doub
+push 0b01001000
 outc
-jumpnp loop
+push 'e'
+outc
+
+; ; cat
+; label loop
+; push 1
+; inc
+; retrive 1
+; doub
+; outc
+; jumpnp loop
 
 ; push 0
 ; doub
