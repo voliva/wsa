@@ -4,7 +4,8 @@
   "description": "",
   "type": "module",
   "scripts": {
-    "start": "node wsa.js"
+    "start": "node wsa.js",
+    "exec": "./bin/exec.sh"
   },
   "keywords": [],
   "author": "",

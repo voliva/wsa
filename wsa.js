@@ -236,7 +236,7 @@ if (!process.argv[2]) {
   process.exit(1);
 }
 
-const withAnnotations = true;
+const withAnnotations = false;
 parseFile(process.argv[2]).then((res) => {
   const withExit = `${res}${exit()}`;
   if (withAnnotations) {
