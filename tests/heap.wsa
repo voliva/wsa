@@ -4,19 +4,23 @@ store
 retrive 3
 outn
 
-; TODO change this behaviour
-push 3
-store 5
-retrive 3
+push 5
+store 4
+retrive 4
 outn
 
 push 3
 store 5
-push 3
+push 5
 retrive
 outn
 
-; TODO +offset
+push 100
+store 0
+push 123
+store 101
+retrive +1
+outn
 
 ;EXPECTED
-;555
+;553123

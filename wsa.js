@@ -102,26 +102,50 @@ function doub() {
 function swap() {
   return " \n\t";
 }
+
+function pushIfDefined(value) {
+  if (value !== "" && value != undefined) {
+    return push(value);
+  }
+  return "";
+}
 function add(value) {
-  return (value ? push(value) : "") + "\t   ";
+  return pushIfDefined(value) + "\t   ";
 }
 function sub(value) {
-  return (value ? push(value) : "") + "\t  \t";
+  return pushIfDefined(value) + "\t  \t";
 }
 function mul(value) {
-  return (value ? push(value) : "") + "\t  \n";
+  return pushIfDefined(value) + "\t  \n";
 }
 function div(value) {
-  return (value ? push(value) : "") + "\t \t ";
+  return pushIfDefined(value) + "\t \t ";
 }
 function mod(value) {
-  return (value ? push(value) : "") + "\t \t\t";
+  return pushIfDefined(value) + "\t \t\t";
 }
+
+function pushAddress(addr) {
+  if (
+    typeof addr == "string" &&
+    (addr.startsWith("+") || addr.startsWith("-"))
+  ) {
+    return retrive(0) + add(Number(addr));
+  } else {
+    return pushIfDefined(addr);
+  }
+}
+
 function store(value) {
-  return (value ? push(value) : "") + "\t\t ";
+  let result = "";
+  if (value) {
+    result += pushAddress(value);
+    result += swap();
+  }
+  return result + "\t\t ";
 }
 function retrive(value) {
-  return (value ? push(value) : "") + "\t\t\t";
+  return pushAddress(value) + "\t\t\t";
 }
 function call(label) {
   return `\n \t${getTranslatedLabel(label)}`;
