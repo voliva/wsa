@@ -35,9 +35,9 @@ pop
 foo:
 retrive 0
 doub
-retrive -1
+retrive -0
 swap
-retrive -2
+retrive -1
 add
 vpop
 vpop

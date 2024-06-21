@@ -1,0 +1,22 @@
+push 3
+push 5
+store
+retrive 3
+outn
+
+; TODO change this behaviour
+push 3
+store 5
+retrive 3
+outn
+
+push 3
+store 5
+push 3
+retrive
+outn
+
+; TODO +offset
+
+;EXPECTED
+;555

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node main.js",
-    "exec": "./bin/exec.sh"
+    "exec": "./bin/exec.sh",
+    "test": "node run_tests.js"
   },
   "keywords": [],
   "author": "",

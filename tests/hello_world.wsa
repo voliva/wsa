@@ -1,0 +1,27 @@
+push 'H'
+outc
+push 'e'
+outc
+push 'l'
+outc
+push 'l'
+outc
+push 'o'
+outc
+push ' '
+outc
+push 'W'
+outc
+push 'o'
+outc
+push 'r'
+outc
+push 'l'
+outc
+push 'd'
+outc
+push '!'
+outc
+
+;EXPECTED
+;Hello World!

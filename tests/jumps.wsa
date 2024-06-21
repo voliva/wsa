@@ -1,0 +1,118 @@
+jump jump_end
+push 'n'
+outc
+label jump_end
+
+push 1
+outn
+
+push 0
+jumpz jumpz_false
+jump jumpz_err
+label jumpz_false
+push 1
+jumpz jumpz_err
+push -1
+jumpz jumpz_err
+jump jumpz_end
+label jumpz_err
+push 'n'
+outc
+label jumpz_end
+
+push 2
+outn
+
+push -1
+jumpn jumpn_false
+jump jumpn_err
+label jumpn_false
+push 0
+jumpn jumpn_err
+push 1
+jumpn jumpn_err
+jump jumpn_end
+label jumpn_err
+push 'n'
+outc
+label jumpn_end
+
+push 3
+outn
+
+push 1
+jumpp jumpp_false
+jump jumpp_err
+label jumpp_false
+push 0
+jumpp jumpp_err
+push -1
+jumpp jumpp_err
+jump jumpp_end
+label jumpp_err
+push 'n'
+outc
+label jumpp_end
+
+push 4
+outn
+
+push -1
+jumpnz jumpnz_zero
+jump jumpnz_err
+label jumpnz_zero
+push 0
+jumpnz jumpnz_false
+jump jumpnz_err
+label jumpnz_false
+push 1
+jumpnz jumpnz_err
+jump jumpnz_end
+label jumpnz_err
+push 'n'
+outc
+label jumpnz_end
+
+push 5
+outn
+
+push 1
+jumppz jumppz_zero
+jump jumppz_err
+label jumppz_zero
+push 0
+jumppz jumppz_false
+jump jumppz_err
+label jumppz_false
+push -1
+jumppz jumppz_err
+jump jumppz_end
+label jumppz_err
+push 'n'
+outc
+label jumppz_end
+
+push 6
+outn
+
+push -1
+jumppn jumppn_positive
+jump jumppn_err
+label jumppn_positive
+push 1
+jumppn jumppn_false
+jump jumppn_err
+label jumppn_false
+push 0
+jumppn jumppn_err
+jump jumppn_end
+label jumppn_err
+push 'n'
+outc
+label jumppn_end
+
+push 7
+outn
+
+;EXPECTED
+;1234567

@@ -1,0 +1,11 @@
+push 1
+push 2
+add
+outn
+
+push 1
+add 2
+outn
+
+;EXPECTED
+;33

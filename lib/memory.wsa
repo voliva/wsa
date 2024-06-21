@@ -1,0 +1,39 @@
+label malloc
+
+valueinteger STACK_HEAD 0
+valueinteger HEAP_HEAD 4294967294
+
+retrive HEAP_HEAD
+doub
+jumpz malloc_empty
+retrive ; head of first block
+
+jump malloc_end
+label malloc_empty
+pop
+
+; Calculate target head, keep it stored
+; Set +0 to NIL
+; Set +1 to size argument (read vstack +0)
+; Set HEAP_HEAD to target head
+; Return head + 2
+
+
+label malloc_end
+
+; arg: head, size, prev, next
+label malloc_allocate
+retrive STACK_HEAD
+doub
+; &stack,&stack
+retrive -3
+doub
+; &stack,&head,&head
+; Set +0 to NIL
+push 0 ; TODO check ordering, maybe it's easier
+swap
+store
+
+; Set +1 to size argument (read vstack +0)
+; Set HEAP_HEAD to target head
+; Return head + 2

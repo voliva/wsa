@@ -1,0 +1,17 @@
+push 0
+label loop
+doub
+outn
+add 1
+doub
+test 10
+jumpz end
+push ' '
+outc
+jump loop
+
+label end
+pop
+
+;EXPECTED
+;0 1 2 3 4 5 6 7 8 9
