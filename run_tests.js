@@ -4,17 +4,19 @@ import { createReadStream } from "fs";
 import path from "path";
 import { spawn } from "child_process";
 import { assert } from "console";
+import { argv } from "process";
+
+const filter = argv[2];
 
 async function run_tests() {
   const files = await readdir("tests");
   const wsa_files = files.filter((file) => file.endsWith("wsa"));
 
-  /*
-  node main.js $1 > /tmp/compiled.wspace
-  ls -l /tmp/compiled.wspace
-  ./wspace /tmp/compiled.wspace
-  */
   for (const file of wsa_files) {
+    if (filter && !file.includes(filter)) {
+      continue;
+    }
+
     console.log("Running " + file);
     const filePath = path.join("tests", file);
     const compiled = await compileAndExit(
