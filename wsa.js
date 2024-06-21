@@ -142,7 +142,7 @@ function store(value) {
     result += pushAddress(value);
     result += swap();
   }
-  return result + "\t\t ";
+  return result + "\t\t " + push("'c'") + outc();
 }
 function retrive(value) {
   return pushAddress(value) + "\t\t\t";
@@ -177,9 +177,13 @@ function jumppn(jmpLabel) {
 
 async function include(filename, getIncludedStream) {
   const content = await (() => {
-    if (filename == "io") {
+    const libs = ["io", "memory"];
+    if (libs.includes(filename)) {
       // TODO relative to wsa.mjs
-      return compile(getIncludedStream("./lib/io.wsa"), getIncludedStream);
+      return compile(
+        getIncludedStream(`./lib/${filename}.wsa`),
+        getIncludedStream
+      );
     }
     return "TODO";
   })();
@@ -218,7 +222,7 @@ function valuestring(args) {
   valueMap[name] = value;
   return "";
 }
-function valueinteger() {
+function valueinteger(args) {
   const [name, ...rest] = args.split(" ");
   if (!name.startsWith("_")) {
     throw new Error(`${name} doesn't start with _`);

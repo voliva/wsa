@@ -1,8 +1,15 @@
 ; ; Hello world
-include io
+; include io
 
-pushs hello world!
-call printsln
+; pushs hello world!
+; call printsln
+
+include memory
+
+push 100
+store +0
+call malloc
+; outn
 
 ; ; New hello world. Will be way harder
 ; vpush 13
