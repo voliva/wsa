@@ -78,7 +78,7 @@ export function callbackInput(morePlease: () => Promise<string>): IO["input"] {
         i++;
       }
 
-      const result = BigInt(buffer.slice(0, i - 1));
+      const result = BigInt(buffer.slice(0, i));
       buffer = buffer.slice(i);
       return result;
     },
