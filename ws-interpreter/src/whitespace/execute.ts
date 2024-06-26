@@ -55,18 +55,24 @@ export async function step(
   const instruction = program.instructions[state.pc];
   const result = { ...state };
 
-  switch (instruction.imp) {
-    case "arithmetic":
-      return stepArithmetic(result, instruction);
-    case "flow":
-      return stepFlow(result, instruction, program.labels);
-    case "heap":
-      return stepHeap(result, instruction);
-    case "io":
-      return stepIo(result, instruction, io);
-    case "stack":
-      return stepStack(result, instruction);
-  }
+  // console.log("step", instruction);
+
+  await (() => {
+    switch (instruction.imp) {
+      case "arithmetic":
+        return stepArithmetic(result, instruction);
+      case "flow":
+        return stepFlow(result, instruction, program.labels);
+      case "heap":
+        return stepHeap(result, instruction);
+      case "io":
+        return stepIo(result, instruction, io);
+      case "stack":
+        return stepStack(result, instruction);
+    }
+  })();
+
+  return result;
 }
 
 export async function execute(program: Program, io: IO): Promise<MachineState> {
@@ -193,7 +199,7 @@ function stepHeap(state: MachineState, instruction: HeapOp): MachineState {
         `Heap op ${state.pc} failed: Heap not large enough. addr = ${addr}`
       );
     }
-    state.stack.push(state.heap[Number(addr)]);
+    state.stack.push(state.heap[Number(addr)] ?? 0n);
   } else {
     if (state.stack.length < 2) {
       throw new Error(
@@ -283,13 +289,8 @@ async function stepIo(
   instruction: IoOp,
   io: IO
 ): Promise<MachineState> {
-  if (
-    (instruction.op.type === "outc" || instruction.op.type === "outn") &&
-    state.stack.length === 0
-  ) {
-    throw new Error(
-      `IO op ${state.pc} failed: output needs a value in the stack`
-    );
+  if (state.stack.length === 0) {
+    throw new Error(`IO op ${state.pc} failed: IO needs a value in the stack`);
   }
 
   state.stack = [...state.stack];
@@ -301,10 +302,16 @@ async function stepIo(
       io.output.number(state.stack.pop()!);
       break;
     case "readc":
-      state.stack.push(BigInt((await io.input.char()).charCodeAt(0)));
+      state.heap = [...state.heap];
+      // TODO address overflow
+      state.heap[Number(state.stack.pop()!)] = BigInt(
+        (await io.input.char()).charCodeAt(0)
+      );
       break;
     case "readn":
-      state.stack.push(await io.input.number());
+      state.heap = [...state.heap];
+      // TODO address overflow
+      state.heap[Number(state.stack.pop()!)] = await io.input.number();
       break;
   }
 

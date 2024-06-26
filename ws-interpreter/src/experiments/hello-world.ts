@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { parseWhitespaceProgram } from "../whitespace/parse.ts";
 import { execute, loadProgram } from "../whitespace/execute.ts";
+import { callbackOutput, staticInput } from "../whitespace/io.ts";
+import { parseWhitespaceProgram } from "../whitespace/parse.ts";
 
 const programStr = `S S S T	S S T	S S S L:Push_+1001000=72='H'_onto_the_stack
 T	L
@@ -39,16 +40,6 @@ console.log(program.instructions);
 declare const process: any;
 
 execute(program, {
-  input: {
-    char() {
-      throw new Error("TODO");
-    },
-    number() {
-      throw new Error("TODO");
-    },
-  },
-  output: {
-    char: (v) => process.stdout.write(v),
-    number: (v) => process.stdout.write(v.toString()),
-  },
+  input: staticInput(),
+  output: callbackOutput((v) => process.stdout.write(v)),
 });

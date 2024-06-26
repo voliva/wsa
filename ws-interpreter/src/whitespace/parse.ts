@@ -39,7 +39,7 @@ export function parseWhitespaceProgram(program: string) {
     return [result * sign, i];
   }
   function readLabel(idx: number): [string, number] {
-    const [result, i] = readUnsignedNumber(idx + 1);
+    const [result, i] = readUnsignedNumber(idx);
     return [`label_${result}`, i];
   }
   function readStack(idx: number): [StackOp, number] {
@@ -216,6 +216,7 @@ export function parseWhitespaceProgram(program: string) {
     const error = (): never => {
       throw new Error("Unable to parse IMP: " + readable(double));
     };
+    // console.log(idx, readable(single), readable(double));
     const [op, next] =
       single === " "
         ? readStack(idx + 1)

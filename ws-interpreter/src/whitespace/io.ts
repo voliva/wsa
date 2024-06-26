@@ -9,11 +9,17 @@ export interface IO {
   };
 }
 
+export function callbackOutput(cb: (output: string) => void): IO["output"] {
+  return {
+    char: (v) => cb(v),
+    number: (v) => cb(v.toString()),
+  };
+}
+
 export function arrayOutput(): IO["output"] & { result: string[] } {
   const result: string[] = [];
   return {
-    char: (v) => result.push(v),
-    number: (v) => result.push(v.toString()),
+    ...callbackOutput((v) => result.push(v)),
     result,
   };
 }
@@ -57,12 +63,29 @@ export function callbackInput(morePlease: () => Promise<string>): IO["input"] {
     },
     number: async () => {
       let i = 0;
-      // TODO
+
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        if (buffer.length <= i) {
+          await reload();
+        }
+        const c = buffer.charAt(i);
+        if (c == " " || c == "\n" || c == "\t") break;
+        if (isNaN(Number(c))) {
+          throw new Error("IO: Expected number, got " + buffer.slice(0, i));
+        }
+
+        i++;
+      }
+
+      const result = BigInt(buffer.slice(0, i - 1));
+      buffer = buffer.slice(i);
+      return result;
     },
   };
 }
 
-export function staticInput(value: string): IO["input"] {
+export function staticInput(value = ""): IO["input"] {
   let handedOver = false;
 
   return callbackInput(async () => {
