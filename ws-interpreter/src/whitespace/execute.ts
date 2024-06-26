@@ -1,3 +1,4 @@
+import { IO } from "./io";
 import {
   ArithmeticOp,
   FlowOp,
@@ -19,17 +20,6 @@ export interface MachineState {
 export interface Program {
   instructions: WhitespaceOp[];
   labels: Record<string, number>;
-}
-
-export interface IO {
-  input: {
-    char: () => Promise<string>;
-    number: () => Promise<bigint>;
-  };
-  output: {
-    char: (c: string) => void;
-    number: (n: bigint) => void;
-  };
 }
 
 export function loadProgram(instructions: WhitespaceOp[]): Program {
