@@ -161,7 +161,7 @@ function stepFlow(
       state.pc = labels[instruction.op.value];
       break;
     case "jmpn":
-    case "jmpz":
+    case "jmpz": {
       state.stack = [...state.stack];
       if (state.stack.length < 1) {
         throw new Error(
@@ -174,6 +174,7 @@ function stepFlow(
         (instruction.op.type === "jmpz" && value === 0n);
       state.pc = passes ? labels[instruction.op.value] : state.pc + 1;
       break;
+    }
     case "mark":
       state.pc++;
       break;
@@ -226,7 +227,7 @@ function stepHeap(state: MachineState, instruction: HeapOp): MachineState {
 
 function stepStack(state: MachineState, instruction: StackOp): MachineState {
   switch (instruction.op.type) {
-    case "copy":
+    case "copy": {
       const pos = state.stack.length - 1 - Number(instruction.op.value);
       if (pos < 0) {
         throw new Error(`Stack op ${state.pc} failed: Stack underflow`);
@@ -234,6 +235,7 @@ function stepStack(state: MachineState, instruction: StackOp): MachineState {
       state.stack = [...state.stack];
       state.stack.push(state.stack[pos]);
       break;
+    }
     case "dup":
       if (state.stack.length === 0) {
         throw new Error(
@@ -256,7 +258,7 @@ function stepStack(state: MachineState, instruction: StackOp): MachineState {
       state.stack = [...state.stack];
       state.stack.push(instruction.op.value);
       break;
-    case "slide":
+    case "slide": {
       const start = state.stack.length - 1 - Number(instruction.op.value + 1n);
       if (start < 0) {
         throw new Error(
@@ -268,7 +270,8 @@ function stepStack(state: MachineState, instruction: StackOp): MachineState {
         ...state.stack.slice(start + Number(instruction.op.value)),
       ];
       break;
-    case "swap":
+    }
+    case "swap": {
       if (state.stack.length < 2) {
         throw new Error(`Stack op ${state.pc} failed: Swap needs 2 elements`);
       }
@@ -278,6 +281,7 @@ function stepStack(state: MachineState, instruction: StackOp): MachineState {
       state.stack.push(a);
       state.stack.push(b);
       break;
+    }
   }
 
   state.pc++;
