@@ -7,7 +7,11 @@ export const Button: FC<ButtonHTMLAttributes<HTMLButtonElement>> = ({
 }) => (
   <button
     type="button"
-    className={twMerge("border rounded py-1 px-2", className)}
+    className={twMerge(
+      "border rounded py-1 px-2",
+      props.disabled ? "opacity-50" : null,
+      className
+    )}
     {...props}
   />
 );

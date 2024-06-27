@@ -43,7 +43,7 @@ export function initializeState(): MachineState {
     callStack: [],
     pc: 0,
     halted: false,
-    paused: false,
+    paused: true,
   };
 }
 
@@ -213,7 +213,7 @@ function stepHeap(state: MachineState, instruction: HeapOp): MachineState {
         `Heap op ${state.pc} failed: Heap not large enough. addr = ${addr}`
       );
     }
-    state.heap = [...state.heap];
+    state.heap = structuredClone(state.heap);
     state.heap[Number(addr)] = value;
   }
 
@@ -302,14 +302,14 @@ async function stepIo(
       io.output.number(state.stack.pop()!);
       break;
     case "readc":
-      state.heap = [...state.heap];
+      state.heap = structuredClone(state.heap);
       // TODO address overflow
       state.heap[Number(state.stack.pop()!)] = BigInt(
         (await io.input.char()).charCodeAt(0)
       );
       break;
     case "readn":
-      state.heap = [...state.heap];
+      state.heap = structuredClone(state.heap);
       // TODO address overflow
       state.heap[Number(state.stack.pop()!)] = await io.input.number();
       break;
