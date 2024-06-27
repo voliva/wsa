@@ -239,7 +239,7 @@ function stepStack(state: MachineState, instruction: StackOp): MachineState {
         );
       }
       state.stack = [...state.stack];
-      state.stack.push(state.stack[0]);
+      state.stack.push(state.stack[state.stack.length - 1]);
       break;
     case "pop":
       if (state.stack.length === 0) {

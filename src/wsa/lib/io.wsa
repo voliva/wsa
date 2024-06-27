@@ -1,12 +1,22 @@
 label prints
+retrive +0
 
+label prints_loop
+doub
+retrive
 doub
 jumpz prints_end
 outC
-jump prints
+add 1
+jump prints_loop
 
 label prints_end
 pop
+pop
+
+retrive _STACK_HEAD
+sub 1
+store _STACK_HEAD
 ret
 
 label printsln

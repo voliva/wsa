@@ -8,29 +8,10 @@ import {
 import { WhitespaceOp, parseWhitespaceProgram } from "./whitespace";
 import { IO, callbackInput, callbackOutput } from "./whitespace/io";
 import { Button } from "./Button";
-
-const programStr = `[LF][Space][Space][Space][LF]
-[Space][Space][Space][Tab][LF]
-[Tab][LF][Tab][Space]
-[Space][Space][Space][Tab][LF]
-[Tab][Tab][Tab]
-[Tab][LF][Space][Space]
-[Space][Space][Space][Tab][LF]
-[Tab][Tab][Tab]
-[LF][Tab][Space][Tab][LF]
-[LF][Space][LF][Space][LF]
-[LF][Space][Space][Tab][LF]
-[LF][LF][LF]
-`
-  .replaceAll("\n", "")
-  .replaceAll("[LF]", "\n")
-  .replaceAll("[Space]", " ")
-  .replaceAll("[Tab]", "\t");
+import { compileAndExit, stringToLineStream } from "./wsa/wsa";
 
 function App() {
-  const [program, setProgram] = useState<Program | null>(
-    loadProgram(parseWhitespaceProgram(programStr))
-  );
+  const [program, setProgram] = useState<Program | null>(null);
 
   if (!program) {
     return <ProgramLoader onSubmit={(v) => setProgram(loadProgram(v))} />;
@@ -44,7 +25,7 @@ const ProgramLoader: FC<{
 }> = ({ onSubmit }) => {
   const ref = useRef<HTMLTextAreaElement | null>(null);
 
-  const loadASM = () => {
+  const loadASM = async () => {
     const stringValue = ref.current!.value;
 
     if (stringValue.includes("[LF]")) {
@@ -57,9 +38,15 @@ const ProgramLoader: FC<{
             .replaceAll("[Tab]", "\t")
         )
       );
+    } else {
+      onSubmit(
+        parseWhitespaceProgram(
+          await compileAndExit(stringToLineStream(ref.current!.value), () => {
+            throw new Error("Can't import other files");
+          })
+        )
+      );
     }
-
-    onSubmit(parseWhitespaceProgram(ref.current!.value));
   };
 
   return (
@@ -69,7 +56,7 @@ const ProgramLoader: FC<{
         ref={ref}
         className="w-full max-w-2xl self-center border rounded p-2 min-h-36"
       />
-      <div className="flex">
+      <div className="flex justify-center gap-2">
         <Button
           onClick={() => onSubmit(parseWhitespaceProgram(ref.current!.value))}
         >
@@ -208,7 +195,7 @@ const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 overflow-hidden">
       <Instructions program={program} pc={state.pc} />
       <div className="flex flex-col">
         <div className="flex gap-2">
@@ -260,8 +247,18 @@ const Instructions: FC<{ program: Program; pc: number }> = ({
     return values.join(" ");
   };
 
+  const olRef = useRef<HTMLOListElement | null>(null);
+  useEffect(() => {
+    const element = olRef.current?.childNodes[pc] as HTMLElement;
+    element?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "nearest",
+    });
+  }, [pc]);
+
   return (
-    <ol className="flex-1">
+    <ol className="flex-1 overflow-auto" ref={olRef}>
       {program.instructions.map((instr, idx) => (
         <li
           key={idx}

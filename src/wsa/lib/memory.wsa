@@ -1,12 +1,17 @@
+valueinteger _STACK_HEAD 0
+valueinteger _HEAP_HEAD 4294967294
+
+label memory_init
+push 1
+store _STACK_HEAD
+ret
+
 ; arg: size
 label malloc
-
-valueinteger _STACK_HEAD 0
-valueinteger _HEAP_HEAD 429
-
 retrive _HEAP_HEAD
 doub
 jumpz malloc_empty
+; todo
 pop
 push 121
 
@@ -16,12 +21,12 @@ pop
 
 ; head = _HEAP_HEAD - `size`
 push _HEAP_HEAD
-retrive +0
+retrive -0
 sub
 doub
 store +1
 ; size = `size`
-retrive +0
+retrive -0
 store +2
 ; prev = _HEAP_HEAD
 push _HEAP_HEAD
@@ -31,17 +36,19 @@ push 0
 store +4
 ; Perform call
 retrive _STACK_HEAD
-doub
 add 4
 store _STACK_HEAD
 call malloc_allocate
 pop
-store _STACK_HEAD
 ; In stack we have the head of the element, because of the doub performed after calculating it
 
 label malloc_end
 ; Assuming we have addr of head on stack
 add 2
+
+retrive _STACK_HEAD
+sub 1
+store _STACK_HEAD
 ret
 
 ; arg: head, size, prev, next
@@ -50,9 +57,9 @@ label malloc_allocate
 retrive -3
 retrive -0
 store
-; Store `size` to &`head`-1
+; Store `size` to &`head`+1
 retrive -3
-sub 1
+add 1
 retrive -2
 store
 ; Store &`head` to &`prev`
@@ -61,4 +68,8 @@ retrive -3
 store
 ; Return void
 push 0
+
+retrive _STACK_HEAD
+sub 4
+store _STACK_HEAD
 ret

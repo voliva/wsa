@@ -3,16 +3,19 @@ import lib_memory from "./lib/memory.wsa?raw";
 
 const opcodes = {
   push,
-  pop,
-  label,
   doub,
   swap,
+  pop,
+  scpy,
+  slide,
+  label,
   add,
   sub,
   mul,
   div,
   mod,
   store,
+  storestr,
   retrive,
   call,
   jump,
@@ -32,6 +35,7 @@ const opcodes = {
   test,
   valuestring,
   valueinteger,
+  debugger: _debugger,
 };
 
 export type LineStream = (onLine: (line: string | null) => void) => () => void;
@@ -45,6 +49,7 @@ export const stringToLineStream =
       for (let i = 0; i < lines.length && !stopped; i++) {
         onLine(lines[i]);
       }
+      onLine(null);
     });
 
     return () => {
@@ -97,14 +102,20 @@ function push(value: string | bigint) {
 function pop() {
   return ` \n\n`;
 }
-function label(label: string) {
-  return `\n  ${getTranslatedLabel(label)}`;
-}
 function doub() {
   return ` \n `;
 }
 function swap() {
   return " \n\t";
+}
+function scpy(value: string) {
+  return " \t " + number(BigInt(resolveValue(value)));
+}
+function slide(value: string) {
+  return " \t\n" + number(BigInt(resolveValue(value)));
+}
+function label(label: string) {
+  return `\n  ${getTranslatedLabel(label)}`;
 }
 
 function pushIfDefined(value: string | bigint | undefined) {
@@ -140,13 +151,23 @@ function pushAddress(addr: string | bigint | undefined): string {
   }
 }
 
-function store(value: string) {
+function store(value?: string) {
   let result = "";
   if (value) {
     result += pushAddress(value);
     result += swap();
   }
-  return result + "\t\t " + push("'c'") + outc();
+  return result + "\t\t ";
+}
+function storestr(value: string) {
+  value = String(resolveValue(value));
+
+  return (
+    (value + "\0")
+      .split("")
+      .map((v) => doub() + push(BigInt(v.charCodeAt(0))) + store() + add(1n))
+      .join("") + pop()
+  );
 }
 function retrive(value: string | bigint) {
   return pushAddress(value) + "\t\t\t";
@@ -237,6 +258,9 @@ function valueinteger(args: string) {
   const value = BigInt(rest.join(" "));
   valueMap[name] = value;
   return "";
+}
+function _debugger() {
+  return "\n\n ";
 }
 
 export async function compile(

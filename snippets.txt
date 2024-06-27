@@ -1,0 +1,54 @@
+cat
+[LF][Space][Space][Space][LF]
+[Space][Space][Space][Tab][LF]
+[Tab][LF][Tab][Space]
+[Space][Space][Space][Tab][LF]
+[Tab][Tab][Tab]
+[Tab][LF][Space][Space]
+[Space][Space][Space][Tab][LF]
+[Tab][Tab][Tab]
+[LF][Tab][Space][Tab][LF]
+[LF][Space][LF][Space][LF]
+[LF][Space][Space][Tab][LF]
+[LF][LF][LF]
+
+cat
+label loop
+push 4294967294
+inc
+retrive 4294967294
+doub
+outc
+jumpnp loop
+
+truth-machine
+[Space][Space][Space][LF]
+[Space][LF][Space]
+[Tab][LF][Tab][Tab]
+[Tab][Tab][Tab]
+[LF][Tab][Space][Space][LF]
+[LF][Space][Space][Tab][LF]
+[Space][Space][Space][Tab][LF]
+[Tab][LF][Space][Tab]
+[LF][Space][LF][Tab][LF]
+[LF][Space][Space][Space][LF]
+[Space][Space][Space][LF]
+[Tab][LF][Space][Tab]
+[LF][LF][LF]
+
+include memory
+call memory_init
+include io
+push 100
+store +1
+push 2
+store 0
+call malloc
+doub
+storestr hello world!
+doub
+store +1
+push 2
+store 0
+call printsln
+pop
