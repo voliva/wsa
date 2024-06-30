@@ -199,6 +199,11 @@ function stepHeap(state: MachineState, instruction: HeapOp): MachineState {
         `Heap op ${state.pc} failed: Heap not large enough. addr = ${addr}`
       );
     }
+    if (addr < 0n) {
+      throw new Error(
+        `Heap op ${state.pc} failed: Can't access a negative address. addr = ${addr}`
+      );
+    }
     state.stack.push(state.heap[Number(addr)] ?? 0n);
   } else {
     if (state.stack.length < 2) {
@@ -211,6 +216,11 @@ function stepHeap(state: MachineState, instruction: HeapOp): MachineState {
     if (addr > BigInt(Number.MAX_SAFE_INTEGER)) {
       throw new Error(
         `Heap op ${state.pc} failed: Heap not large enough. addr = ${addr}`
+      );
+    }
+    if (addr < 0n) {
+      throw new Error(
+        `Heap op ${state.pc} failed: Can't store on a negative address. addr = ${addr}`
       );
     }
     state.heap = structuredClone(state.heap);
@@ -232,7 +242,7 @@ function stepStack(state: MachineState, instruction: StackOp): MachineState {
       state.stack.push(state.stack[pos]);
       break;
     }
-    case "dup":
+    case "doub":
       if (state.stack.length === 0) {
         throw new Error(
           `Stack op ${state.pc} failed: Can't duplicate on empty stack`

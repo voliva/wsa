@@ -74,6 +74,44 @@ doub
 storestr world!
 
 swap
+call print_two
+
+store +1
+push 1
+store 0
+call mfree
+pop
+
+push 4
+store +1
+push 1
+store 0
+call malloc
+doub
+storestr hey
+
+call print_two
+
+store +1
+push 1
+store 0
+call mfree
+pop
+
+push 8
+store +1
+push 1
+store 0
+call malloc
+doub
+storestr welcome
+
+call print_two
+
+exit
+
+label print_two
+doub
 store +1
 push 1
 store 0
@@ -82,7 +120,13 @@ call prints
 push ' '
 outc
 
+swap
+doub
 store +1
 push 1
 store 0
 call printsln
+
+swap
+ret
+

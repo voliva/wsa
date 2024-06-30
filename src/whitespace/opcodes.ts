@@ -6,7 +6,7 @@ export interface StackOp {
         value: bigint;
       }
     | {
-        type: "dup" | "swap" | "pop";
+        type: "doub" | "swap" | "pop";
       };
 }
 export interface ArithmeticOp {

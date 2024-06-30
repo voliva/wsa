@@ -148,3 +148,39 @@ retrive _STACK_HEAD
 sub 4
 store _STACK_HEAD
 ret
+
+; args: data_pointer
+label mfree
+push _HEAP_HEAD
+; Invariant stack: [&prev]
+label mfree_find_prev
+doub
+retrive
+; if it's 0 we've reached the end without finding it
+doub
+jumppn mfree_find_check
+pop
+pop
+; return false as result
+push 0
+jump mfree_end
+label mfree_find_check
+retrive -0
+sub 2
+sub
+jumpz mfree_found
+retrive
+jump mfree_find_prev
+label mfree_found
+; set prev.next to data_pointer.next
+retrive -0
+sub 2
+retrive
+store
+push 1
+label mfree_end
+
+retrive _STACK_HEAD
+sub 1
+store _STACK_HEAD
+ret
