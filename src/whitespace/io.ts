@@ -72,14 +72,18 @@ export function callbackInput(morePlease: () => Promise<string>): IO["input"] {
         const c = buffer.charAt(i);
         if (c == " " || c == "\n" || c == "\t") break;
         if (isNaN(Number(c))) {
-          throw new Error("IO: Expected number, got " + buffer.slice(0, i));
+          const error = new Error(
+            "IO: Expected number, got " + buffer.slice(0, i + 1)
+          );
+          buffer = "";
+          throw error;
         }
 
         i++;
       }
 
-      const result = BigInt(buffer.slice(0, i));
-      buffer = buffer.slice(i);
+      const result = BigInt(buffer.slice(0, i + 1));
+      buffer = buffer.slice(i + 1);
       return result;
     },
   };
