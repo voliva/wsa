@@ -1,47 +1,77 @@
-; ; Hello world
-; include io
-
-; pushs hello world!
-; call printsln
-
+; hello world in 2 stages
 include memory
+include io
 
-push 100
-store +0
+push 6
+store +1
+push 1
+store 0
 call malloc
-; outn
+doub
+storestr hello
 
-; ; New hello world. Will be way harder
-; vpush 13
-; call malloc
-; pop
-; doub
-; stores hello world!
-; doub
-; vpush
-; call printsln
-; pop
-; call free
-; pop
+push 7
+store +1
+push 1
+store 0
+call malloc
+doub
+storestr world!
 
-; cat
-; label loop
-; push 4294967294
-; inc
-; retrive 4294967294
-; doub
-; outc
-; jumpnp loop
+swap
+call print_two
 
-; push 0
-; doub
-; inn
-; retrive
-; jumpz correct
-; label loop
-; push 1
-; outn
-; jump loop
-; label correct
-; push 0
-; outn
+store +1
+push 1
+store 0
+call mfree
+pop
+
+push 4
+store +1
+push 1
+store 0
+call malloc
+doub
+storestr hey
+
+call print_two
+
+store +1
+push 1
+store 0
+call mfree
+pop
+
+push 8
+store +1
+push 1
+store 0
+call malloc
+doub
+storestr welcome
+
+call print_two
+
+exit
+
+label print_two
+doub
+store +1
+push 1
+store 0
+call prints
+
+push ' '
+outc
+
+swap
+doub
+store +1
+push 1
+store 0
+call printsln
+
+swap
+ret
+

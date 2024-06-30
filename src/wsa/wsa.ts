@@ -271,8 +271,13 @@ function valueinteger(args: string) {
   valueMap[name] = value;
   return "";
 }
+
+let debugExtensions = false;
+export function enableDebugExtensions() {
+  debugExtensions = true;
+}
 function _debugger() {
-  return "\n\n ";
+  return debugExtensions ? "\n\n " : "";
 }
 
 export async function compile(

@@ -155,7 +155,7 @@ const useDebounce = <T extends unknown[]>(
       timer.current = {
         lastCall: Date.now(),
         lastArgs: args,
-        timeout: setTimeout(onTimeout, ms + 5),
+        timeout: setTimeout(onTimeout, ms + 5) as unknown as number,
       };
     } else {
       timer.current.lastCall = Date.now();
