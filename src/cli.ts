@@ -44,6 +44,8 @@ program
     if (program.includes("[LF]")) {
       program = program
         .replaceAll("\n", "")
+        .replaceAll(" ", "")
+        .replaceAll("\t", "")
         .replaceAll("[LF]", "\n")
         .replaceAll("[Space]", " ")
         .replaceAll("[Tab]", "\t");

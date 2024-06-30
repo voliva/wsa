@@ -33,6 +33,8 @@ const ProgramLoader: FC<{
         parseWhitespaceProgram(
           stringValue
             .replaceAll("\n", "")
+            .replaceAll(" ", "")
+            .replaceAll("\t", "")
             .replaceAll("[LF]", "\n")
             .replaceAll("[Space]", " ")
             .replaceAll("[Tab]", "\t")
