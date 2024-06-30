@@ -7,12 +7,88 @@ retrive _HEAP_HEAD
 doub
 jumpz malloc_empty
 
-; find an entry where I can fit
+; find an entry in-between two blocks where I can fit
+; preparing an invariant stack of [&head,&prev]. _HEAP_HEAD is &prev
+push _HEAP_HEAD
 
+label malloc_find_empty
+; we need to check `&head+head.size+2 + size+2 < &prev`
+; then store in `&head+head.size+2`, and update &prev.next
+; get &head
+scpy 1
+; get head.size
+doub
+add 1
+retrive
+; &head + head.size
+add
+add 2
+; save `&head+head.size+2` for later
+doub
+retrive -0
+add
+add 2
+; we have 2 extra elements in the stack. Get &prev
+scpy 2
+sub
+jumpnz malloc_in_between
+; the spot is not lare enough, remove the `&head+head.size+2`
 pop
-push 121
+; remove &prev
+pop
+; get next head
+doub
+retrive
+doub
+jumpz malloc_end_chain
+; satisfy invariant [&head,&prev]: Previous head is now prev
+swap
+jump malloc_find_empty
+label malloc_end_chain
+; head.next was pointing to 0, get the state ready to call malloc_allocate
+; TODO maybe malloc_empty can be reused?
+; remove the 0 (head.next)
+pop
+; head = &head - `size`
+doub
+retrive -0
+sub
+store +1
+; size = `size`
+retrive -0
+store +2
+; prev = &head
+store +3
+; next = 0
+push 0
+store +4
+; Perform call
+retrive _STACK_HEAD
+add 4
+store _STACK_HEAD
+call malloc_allocate
+jump malloc_end
+
+label malloc_in_between
+; stack: [&head,&prev,&new_head]
+; head = &new_head
+store +1
+; size = `size`
+retrive -0
+store +2
+; prev = &prev
+store +3
+; next = &head
+store +4
+; Perform call
+retrive _STACK_HEAD
+add 4
+store _STACK_HEAD
+call malloc_allocate
+jump malloc_end
 
 jump malloc_end
+
 label malloc_empty
 pop
 
@@ -63,8 +139,9 @@ store
 retrive -1
 retrive -3
 store
-; Return void
-push 0
+; Return &head
+retrive -3
+push
 
 retrive _STACK_HEAD
 sub 4
