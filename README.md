@@ -1,6 +1,8 @@
-# WSA
+# WSA
 
 Whitespace interpreter and visualiser / debugger.
+
+(Work in progress, proof of concept, side project, might not update in a while)
 
 It also compiles a modified version of [Burghard's WSA](https://github.com/wspace/burghard-wsa)
 
