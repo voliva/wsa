@@ -1,8 +1,8 @@
 # WSA
 
-Whitespace Assembly
+Whitespace interpreter and visualiser / debugger.
 
-Implementation of a modified version of [Burghard's WSA](https://github.com/wspace/burghard-wsa)
+It also compiles a modified version of [Burghard's WSA](https://github.com/wspace/burghard-wsa)
 
 ## Machine details
 
@@ -19,9 +19,9 @@ We're calling "Native stack" and "Native heap" to the stack and heap provided by
 
 - Native stack is used for performing operations.
 - Native heap is split into several parts:
-    - 0: Pointer to head of stack
-    - 1..: Stack
-    - 4_294_967_294: Pointer to first element of the heap, NIL if none
+  - 0: Pointer to head of stack
+  - 1..: Stack
+  - 4_294_967_294: Pointer to first element of the heap, NIL if none
 
 Values in the heap are always 1 value = 1 argument. Strings, vectors, etc. Must be allocated in the heap, and are always passed by reference.
 
@@ -83,24 +83,40 @@ store 0
 ### Heap
 
 The heap tries to stay as much to the end of the memory as possible. Each entry will have:
+
 - +0: Next element in the heap (or NIL)
 - +1: Length of element
 - +2..: Data of element
 
 The standard library on memory will provide few methods to deal with heap:
+
 - malloc(size): Creates a new block.
-    - It will try to put it as close to the end of the memory as possible.
-    - If no gaps are found, it will put it as the new first element.
-    - If gaps are found, then it will get in between.
-    - Returns pointer to start of data.
-- free(data_pointer): Frees up a block.
-    - It will update the linked list accordingly.
-    - No need for the blocks to be double-linked, I can always search from the start.
+  - It will try to put it as close to the end of the memory as possible.
+  - If no gaps are found, it will put it as the new first element.
+  - If gaps are found, then it will get in between.
+  - Returns pointer to start of data.
+- mfree(data_pointer): Frees up a block.
+  - It will update the linked list accordingly.
+  - No need for the blocks to be double-linked, I can always search from the start.
 - realloc(data_pointer, size): Reallocates a block.
-    - Shrinking will not move it.
-    - Expanding will try to not move it if possible.
-    - If not, it will allocate a new block, move everything, and delete.
-    - Returns pointer to start of data.
+  - Shrinking will not move it.
+  - Expanding will try to not move it if possible.
+  - If not, it will allocate a new block, move everything, and delete.
+  - Returns pointer to start of data.
 - memcpy(source, dest, size): Copies data from one side to the other.
-    - Doesn't handle overlaps
+  - Doesn't handle overlaps
 - memset(dest, value, size): Sets all the values of block to `value`.
+
+## Assembly language
+
+It reusues [Burghard's WSA](https://github.com/wspace/burghard-wsa) as assembly language, but with a few modificcations:
+
+- Removes `pushs`, `ifoption`, `elseoption`, `endoption`, `elseifoption`, `debug_printstack`, `debug_printheap`
+- Adds:
+  - `scpy n`: Copy the nth element from the stack to the top of the stack (operand added in whitespace v0.3)
+  - `slide n`: Slide n ittems off the stack, keeping the top one (operand added in whitespace v0.3)
+  - `storestr str`: Stores `str` in the heap using the address defined in the top of the stack (and consuming it).
+  - `debugger`: Signals the interpreter to pause execution at that point.
+- Modifies:
+  - Strings (labels, string literals) don't need to be wrapped between ""
+  - `retrieve` and `store` also accept a numeric value starting with `+` or `-` to indicate getting a value relative to the virtual stack head.

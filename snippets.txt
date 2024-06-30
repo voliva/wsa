@@ -36,6 +36,7 @@ truth-machine
 [Tab][LF][Space][Tab]
 [LF][LF][LF]
 
+; hello world
 include memory
 include io
 push 100
@@ -51,3 +52,37 @@ push 1
 store 0
 call printsln
 pop
+
+; hello world in 2 stages
+include memory
+include io
+
+push 6
+store +1
+push 1
+store 0
+call malloc
+doub
+storestr hello
+
+push 7
+store +1
+push 1
+store 0
+call malloc
+doub
+storestr world!
+
+swap
+store +1
+push 1
+store 0
+call prints
+
+push ' '
+outc
+
+store +1
+push 1
+store 0
+call printsln

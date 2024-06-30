@@ -49,10 +49,11 @@ label malloc_end_chain
 ; TODO maybe malloc_empty can be reused?
 ; remove the 0 (head.next)
 pop
-; head = &head - `size`
+; head = &head - `size` - 2
 doub
 retrive -0
 sub
+sub 2
 store +1
 ; size = `size`
 retrive -0
@@ -92,10 +93,11 @@ jump malloc_end
 label malloc_empty
 pop
 
-; head = _HEAP_HEAD - `size`
+; head = _HEAP_HEAD - `size` - 2
 push _HEAP_HEAD
 retrive -0
 sub
+sub 2
 doub
 store +1
 ; size = `size`
@@ -141,7 +143,6 @@ retrive -3
 store
 ; Return &head
 retrive -3
-push
 
 retrive _STACK_HEAD
 sub 4
