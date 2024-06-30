@@ -37,18 +37,17 @@ truth-machine
 [LF][LF][LF]
 
 include memory
-call memory_init
 include io
 push 100
 store +1
-push 2
+push 1
 store 0
 call malloc
 doub
 storestr hello world!
 doub
 store +1
-push 2
+push 1
 store 0
 call printsln
 pop

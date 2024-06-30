@@ -125,15 +125,27 @@ function pushIfDefined(value: string | bigint | undefined) {
   return "";
 }
 function add(value?: string | bigint) {
+  if (value && Number(value) === 0) {
+    return "";
+  }
   return pushIfDefined(value) + "\t   ";
 }
 function sub(value?: string | bigint) {
+  if (value && Number(value) === 0) {
+    return "";
+  }
   return pushIfDefined(value) + "\t  \t";
 }
 function mul(value?: string | bigint) {
+  if (value && Number(value) === 1) {
+    return "";
+  }
   return pushIfDefined(value) + "\t  \n";
 }
 function div(value?: string | bigint) {
+  if (value && Number(value) === 1) {
+    return "";
+  }
   return pushIfDefined(value) + "\t \t ";
 }
 function mod(value?: string | bigint) {
@@ -151,7 +163,7 @@ function pushAddress(addr: string | bigint | undefined): string {
   }
 }
 
-function store(value?: string) {
+function store(value?: string | bigint) {
   let result = "";
   if (value) {
     result += pushAddress(value);
