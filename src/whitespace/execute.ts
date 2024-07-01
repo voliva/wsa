@@ -271,7 +271,7 @@ function stepStack(state: MachineState, instruction: StackOp): MachineState {
       state.stack.push(instruction.op.value);
       break;
     case "slide": {
-      const start = state.stack.length - 1 - Number(instruction.op.value + 1n);
+      const start = state.stack.length - 1 - Number(instruction.op.value);
       if (start < 0) {
         throw new Error(
           `Stack op ${state.pc} failed: Not enough elements to slide`
