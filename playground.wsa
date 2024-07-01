@@ -52,6 +52,34 @@ call malloc
 doub
 storestr welcome
 
+push 10
+store +1
+push 1
+store 0
+call malloc
+scpy 1
+store +1
+doub
+store +2
+push 8
+store +3
+push 3
+store 0
+call memcpy
+pop
+swap
+
+; args: dest, value, size
+store +1
+push 5
+store +2
+push 8
+store +3
+push 3
+store 0
+call memset
+pop
+
 call print_two
 
 exit

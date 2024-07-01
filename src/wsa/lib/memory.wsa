@@ -191,3 +191,73 @@ retrive _STACK_HEAD
 sub 1
 store _STACK_HEAD
 ret
+
+; args: source, dest, size
+label memcpy
+; invariant [&end_dest,&dest,&source]
+retrive -1
+doub
+retrive -0
+add
+swap
+retrive -2
+
+label memcpy_copy_next
+scpy 2
+scpy 2
+sub
+jumpz memcpy_end
+doub
+retrive
+scpy 2
+swap
+store
+
+add 1
+swap
+add 1
+swap
+
+jump memcpy_copy_next
+
+label memcpy_end
+pop
+pop
+pop
+
+push 0
+retrive _STACK_HEAD
+sub 3
+store _STACK_HEAD
+ret
+
+; args: dest, value, size
+label memset
+; invariant [value,&end_dest,&dest]
+retrive -1
+retrive -2
+doub
+retrive -0
+add
+swap
+label memset_set_next
+doub
+scpy 2
+sub
+jumpz memset_end
+doub
+scpy 3
+store
+add 1
+jump memset_set_next
+
+label memset_end
+pop
+pop
+pop
+
+push 0
+retrive _STACK_HEAD
+sub 3
+store _STACK_HEAD
+ret

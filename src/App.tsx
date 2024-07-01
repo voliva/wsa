@@ -8,7 +8,11 @@ import {
 import { WhitespaceOp, parseWhitespaceProgram } from "./whitespace";
 import { IO, callbackInput, callbackOutput } from "./whitespace/io";
 import { Button } from "./Button";
-import { compileAndExit, stringToLineStream } from "./wsa/wsa";
+import {
+  compileAndExit,
+  enableDebugExtensions,
+  stringToLineStream,
+} from "./wsa/wsa";
 
 function App() {
   const [program, setProgram] = useState<Program | null>(null);
@@ -27,6 +31,7 @@ const ProgramLoader: FC<{
 
   const loadASM = async () => {
     const stringValue = ref.current!.value;
+    enableDebugExtensions();
 
     if (stringValue.includes("[LF]")) {
       onSubmit(
