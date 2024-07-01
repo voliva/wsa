@@ -1,6 +1,13 @@
 valueinteger _STACK_HEAD 0
 valueinteger _HEAP_HEAD 4294967294
 
+label memory_init
+push 0
+doub
+store _STACK_HEAD
+store _HEAP_HEAD
+ret
+
 ; arg: size
 label malloc
 retrive _HEAP_HEAD

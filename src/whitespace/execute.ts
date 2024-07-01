@@ -204,7 +204,13 @@ function stepHeap(state: MachineState, instruction: HeapOp): MachineState {
         `Heap op ${state.pc} failed: Can't access a negative address. addr = ${addr}`
       );
     }
-    state.stack.push(state.heap[Number(addr)] ?? 0n);
+    const value = state.heap[Number(addr)];
+    if (value === undefined) {
+      throw new Error(
+        `Heap op ${state.pc} failed: Access to uninitialized heap address ${addr}`
+      );
+    }
+    state.stack.push(value);
   } else {
     if (state.stack.length < 2) {
       throw new Error(
