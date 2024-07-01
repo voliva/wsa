@@ -158,26 +158,19 @@ ret
 
 ; args: data_pointer
 label mfree
+; Load [&target, &initial_prev]
+retrive -0
+sub 2
 push _HEAP_HEAD
-; Invariant stack: [&prev]
-label mfree_find_prev
-doub
-retrive
+call memory_find_prev
+; As a result we have [&prev]
 ; if it's 0 we've reached the end without finding it
 doub
-jumppn mfree_find_check
-pop
+jumppn mfree_found
 pop
 ; return false as result
 push 0
 jump mfree_end
-label mfree_find_check
-retrive -0
-sub 2
-sub
-jumpz mfree_found
-retrive
-jump mfree_find_prev
 label mfree_found
 ; set prev.next to data_pointer.next
 retrive -0
@@ -185,8 +178,8 @@ sub 2
 retrive
 store
 push 1
-label mfree_end
 
+label mfree_end
 retrive _STACK_HEAD
 sub 1
 store _STACK_HEAD
@@ -260,4 +253,81 @@ push 0
 retrive _STACK_HEAD
 sub 3
 store _STACK_HEAD
+ret
+
+; args: data_pointer, size
+label realloc
+; calculate end memory in current location
+retrive -1
+retrive -0
+add
+; Load [.. &target, &initial_prev]
+retrive -1
+sub 2
+push _HEAP_HEAD
+call memory_find_prev
+; As a result we have [.. &prev]
+sub
+; &prev must be > end memory to be able to resize in place
+jumpn realloc_resize
+; malloc -> memcpy -> mfree
+retrive -0
+store +1
+retrive _STACK_HEAD
+add 1
+store _STACK_HEAD
+call malloc
+; We have to keep the new address to return it at the end
+doub
+; prepare virtual stack [&source &dest size]
+store +2
+retrive -1
+store +1
+retrive -0
+store +3
+retrive _STACK_HEAD
+add 3
+store _STACK_HEAD
+call memcpy
+pop
+retrive -1
+store +1
+retrive _STACK_HEAD
+add 1
+store _STACK_HEAD
+call mfree
+ret
+label realloc_resize
+retrive -1
+sub 1
+retrive -0
+store
+push 0
+ret
+
+; Invariant stack: [&target, &prev]
+; Will result in stack: [&prev]
+label memory_find_prev
+doub
+retrive
+; if it's 0 we've reached the end without finding it
+doub
+jumppn memory_find_check
+pop
+pop
+pop
+pop
+; return 0 as result
+push 0
+ret
+label memory_find_check
+scpy 2
+sub
+jumpz memory_found
+retrive
+jump memory_find_prev
+label memory_found
+; set prev.next to data_pointer.next
+swap
+pop
 ret
