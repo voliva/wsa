@@ -15,72 +15,39 @@ Targeting compatibility with [Lazy wspace](https://github.com/thaliaarchi/lazy-w
 
 ## Memory layout convention
 
-As the language doesn't have a way of offsetting and/or peeking from the stack, we need a convention in order to pass multiple parameters and store locals, which will be what the standard library assumes that will be used.
+The stdlib defined by this repo sets a couple of conventions to perform calls and manage the heap.
 
-We're calling "Native stack" and "Native heap" to the stack and heap provided by the language. The terms "Stack" and "Heap" without anything else, mean the "virtual" stack and heap respectively, which both will be hosted in the Native heap.
+To start off, the default convention for calls is pass arguments through the stack, pushing them in the original order. The call will consume all of the arguments, removing them from the stack, and optionally it will push a value for the return value.
 
-- Native stack is used for performing operations.
-- Native heap is split into several parts:
-  - 0: Pointer to head of stack
-  - 1..: Stack
-  - 4_294_967_294: Pointer to first element of the heap, NIL if none
+Strings, vectors, etc. Must be allocated in the heap, and are always passed by reference.
 
-Values in the heap are always 1 value = 1 argument. Strings, vectors, etc. Must be allocated in the heap, and are always passed by reference.
+The heap is split in 2 pieces: A stack, used to store local variables, and a heap, where blocks can be allocated or freed.
+
+The heap stack helps storing temporary values. Usually, the native stack will suffice, but it has a few disadvantages:
+
+- It can only peek past values.
+- It can't reorganise values.
+- It's the only way of performing any operation.
+- This makes the offset for peeking also not stable.
+
+With the heap stack, each function can assume that their stack is empty, and then use as much space as they need with something that the offsets will remain stable while performing operations.
+
+The memory layout is as follows:
+
+- 0: Pointer to head of stack
+- 1..: Stack
+- 4_294_967_294: Pointer to first element of the heap, NIL if none
 
 ### Stack
 
-vpush 1
-vpush 2
-call foo
-pop
+The standard library on memory provides a few methods to deal with heap stack:
 
-foo:
-retrive 0
-doub
-retrive -0
-swap
-retrive -1
-add
-vpop
-vpop
-ret
-
-; Option1:
-; With local variables, I'll have to reserve them with `vpush` at the start, then offset everything accordingly. When making a call then it's the same as before. Disadvantage is that adding a local variable will have to shift all the offsets
-
-; Option2:
-; Use offsets for everything without vpush, but when doing a call:
-retrive 0
-doub
-store +3 ; assuming we had locals on +1 and +2
-add 3
-store 0 ; move vstack to new offset
-; up to here could be a new operator `vbackup 3`
-vpush 1
-vpush 2
-call foo
-pop
-; vstack is now at moved root, which points to the original root.
-retrive
-store 0
-; this could be abstracted as operator `vrestore`
-; Keep using offsets as before.
-; I'm thinking that it could be simpler. If we know we add 3 and then substract 3, we don't need to store these offsets into a new part. Just hardcode.
-; Btw, this also means that adding a new local will have to shift all of these offsets. Oh well?
-
-; vpush definition:
-retrive 0
-doub
-push {v}
-swap ; ??? maybe not, depends on store spec
-store
-add 1
-store 0
-
-; vpop definition:
-retrive 0
-sub 1
-store 0
+- `stack_freeze(n)`: Removes `n` from the native stack and pushes them onto the native stack, in the same order.
+- `stack_restore(n)`: Removes `n` from the heap stack and pushes them onto the native stack, in the same order.
+- `stack_discard(n)`: Removes `n` from the heap stack.
+- `stack_get(offset)`: Gets the nth element from the stack (starting at 0).
+- `stack_get_head()`: Sugar for `stack_get(0)`.
+- `stack_set(offset, value)`: Sets the nth element of the stack (starting at 0) to `value`.
 
 ### Heap
 
@@ -90,7 +57,7 @@ The heap tries to stay as much to the end of the memory as possible. Each entry 
 - +1: Length of element
 - +2..: Data of element
 
-The standard library on memory will provide few methods to deal with heap:
+The standard library on memory provides few methods to deal with heap:
 
 - malloc(size): Creates a new block.
   - It will try to put it as close to the end of the memory as possible.
@@ -111,7 +78,7 @@ The standard library on memory will provide few methods to deal with heap:
 
 ## Assembly language
 
-It reusues [Burghard's WSA](https://github.com/wspace/burghard-wsa) as assembly language, but with a few modificcations:
+It reusues [Burghard's WSA](https://github.com/wspace/burghard-wsa) as assembly language, but with a few modifications:
 
 - Removes `pushs`, `ifoption`, `elseoption`, `endoption`, `elseifoption`, `debug_printstack`, `debug_printheap`
 - Adds:
@@ -121,4 +88,3 @@ It reusues [Burghard's WSA](https://github.com/wspace/burghard-wsa) as assembly 
   - `debugger`: Signals the interpreter to pause execution at that point.
 - Modifies:
   - Strings (labels, string literals) don't need to be wrapped between ""
-  - `retrieve` and `store` also accept a numeric value starting with `+` or `-` to indicate getting a value relative to the virtual stack head.

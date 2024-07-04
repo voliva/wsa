@@ -1,5 +1,4 @@
 label prints
-retrive +0
 
 label prints_loop
 doub
@@ -14,9 +13,6 @@ label prints_end
 pop
 pop
 
-retrive _STACK_HEAD
-sub 1
-store _STACK_HEAD
 ret
 
 label printsln

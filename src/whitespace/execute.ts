@@ -15,6 +15,7 @@ export interface MachineState {
   pc: number;
   halted: boolean;
   paused: boolean;
+  steps_taken: number;
 }
 
 export interface Program {
@@ -44,6 +45,7 @@ export function initializeState(): MachineState {
     pc: 0,
     halted: false,
     paused: true,
+    steps_taken: 0,
   };
 }
 
@@ -54,7 +56,9 @@ export async function step(
 ): Promise<MachineState> {
   const instruction = program.instructions[state.pc];
   const result = { ...state };
+  result.steps_taken++;
 
+  // console.log(result.steps_taken);
   // console.log("step", instruction);
 
   await (() => {

@@ -32,7 +32,6 @@ const opcodes = {
   outc,
   inn,
   inc,
-  test,
   valuestring,
   valueinteger,
   debugger: _debugger,
@@ -108,10 +107,10 @@ function doub() {
 function swap() {
   return " \n\t";
 }
-function scpy(value: string) {
+function scpy(value: string | bigint) {
   return " \t " + number(BigInt(resolveValue(value)));
 }
-function slide(value: string) {
+function slide(value: string | bigint) {
   return " \t\n" + number(BigInt(resolveValue(value)));
 }
 function label(label: string) {
@@ -152,21 +151,10 @@ function mod(value?: string | bigint) {
   return pushIfDefined(value) + "\t \t\t";
 }
 
-function pushAddress(addr: string | bigint | undefined): string {
-  if (
-    typeof addr == "string" &&
-    (addr.startsWith("+") || addr.startsWith("-"))
-  ) {
-    return retrive(0n) + add(BigInt(addr));
-  } else {
-    return pushIfDefined(addr);
-  }
-}
-
 function store(value?: string | bigint) {
   let result = "";
   if (value) {
-    result += pushAddress(value);
+    result += pushIfDefined(value);
     result += swap();
   }
   return result + "\t\t ";
@@ -182,7 +170,7 @@ function storestr(value: string) {
   );
 }
 function retrive(value: string | bigint) {
-  return pushAddress(value) + "\t\t\t";
+  return pushIfDefined(value) + "\t\t\t";
 }
 function call(label: string) {
   return `\n \t${getTranslatedLabel(label)}`;
@@ -247,9 +235,6 @@ function inn() {
 }
 function inc() {
   return "\t\n\t ";
-}
-function test(value: string) {
-  return [doub(), sub(value)].join("");
 }
 function valuestring(args: string) {
   const [name, ...rest] = args.split(" ");
