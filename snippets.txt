@@ -14,9 +14,9 @@ cat
 
 cat
 label loop
-push 4294967294
+push 0
 readc
-retrieve 4294967294
+retrieve 0
 dup
 outc
 jumpnp loop

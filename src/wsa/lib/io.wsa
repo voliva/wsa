@@ -1,3 +1,5 @@
+jump io_lib_end
+
 label prints
 
 label prints_loop
@@ -20,3 +22,5 @@ call prints
 push 10
 outC
 ret
+
+label io_lib_end

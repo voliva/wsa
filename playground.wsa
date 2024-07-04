@@ -1,6 +1,5 @@
 ; hello world in 2 stages
 include memory
-call memory_init
 include io
 
 push 6

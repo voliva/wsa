@@ -1,3 +1,4 @@
+import { compiledLabels } from "../wsa/wsa";
 import {
   StackOp,
   ArithmeticOp,
@@ -40,7 +41,8 @@ export function parseWhitespaceProgram(program: string) {
   }
   function readLabel(idx: number): [string, number] {
     const [result, i] = readUnsignedNumber(idx);
-    return [`label_${result}`, i];
+    const label = compiledLabels[Number(result)] ?? `label_${result}`;
+    return [label, i];
   }
   function readStack(idx: number): [StackOp, number] {
     if (c(idx) == " ") {

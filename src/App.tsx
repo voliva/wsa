@@ -4,6 +4,8 @@ import {
   initializeState,
   loadProgram,
   step,
+  stepOut,
+  stepOver,
 } from "./whitespace/execute";
 import { WhitespaceOp, parseWhitespaceProgram } from "./whitespace";
 import { IO, callbackInput, callbackOutput } from "./whitespace/io";
@@ -195,41 +197,85 @@ const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
     setRunning(true);
     while (!stepState.halted && !stepState.paused && !stopped.current) {
       stepState = await step(program, stepState, io);
+      if (stopped.current) break;
       debounceSetState(stepState);
       await breathe();
     }
     setRunning(false);
   }
 
+  async function doStepOver() {
+    setState(await stepOver(program, state, io));
+  }
+  async function doStepIn() {
+    setState(await step(program, state, io));
+  }
+  async function doStepOut() {
+    setState(await stepOut(program, state, io));
+  }
+  function pause() {
+    stopped.current = true;
+  }
+  function restart() {
+    stopped.current = true;
+    debounceSetState(initializeState());
+    restartIo();
+    setRunning(false);
+  }
+
+  useEffect(() => {
+    const handleKeyboardEvt = (evt: KeyboardEvent) => {
+      switch (evt.key) {
+        case "c":
+          return run();
+        case "s":
+          return doStepOver();
+        case "i":
+          return doStepIn();
+        case "o":
+          return doStepOut();
+        case "p":
+          return pause();
+        case "r":
+          return restart();
+      }
+    };
+    document.addEventListener("keypress", handleKeyboardEvt);
+    return () => document.removeEventListener("keypress", handleKeyboardEvt);
+  });
+
   return (
     <div className="flex gap-2 overflow-hidden">
       <Instructions program={program} pc={state.pc} />
-      <div className="flex flex-col">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <div className="flex gap-2">
           {running ? (
-            <Button onClick={() => (stopped.current = true)}>Pause</Button>
+            <Button onClick={pause}>
+              <u>P</u>ause
+            </Button>
           ) : (
-            <Button onClick={run}>Run</Button>
+            <Button onClick={run}>
+              <u>C</u>ontinue
+            </Button>
           )}
-          <Button
-            onClick={async () => setState(await step(program, state, io))}
-            disabled={running}
-          >
-            Step
+          <Button onClick={doStepOver} disabled={running}>
+            <u>S</u>tep over
           </Button>
-          <Button
-            onClick={() => {
-              setState(initializeState());
-              restartIo();
-              setRunning(false);
-            }}
-          >
-            Restart
+          <Button onClick={doStepIn} disabled={running}>
+            Step <u>i</u>n
+          </Button>
+          <Button onClick={doStepOut} disabled={running}>
+            Step <u>o</u>ut
+          </Button>
+          <Button onClick={restart}>
+            <u>R</u>estart
           </Button>
         </div>
-        <div className="flex flex-col gap-2">
-          <StackView stack={state.stack} />
-          <HeapView heap={state.heap} />
+        <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+          <div className="flex flex-1 gap-2 min-h-48 overflow-hidden">
+            <StackView stack={state.stack} />
+            <HeapView heap={state.heap} />
+          </div>
           <InputView
             value={inputQueue}
             requested={inputRequested}
@@ -246,6 +292,22 @@ const Instructions: FC<{ program: Program; pc: number }> = ({
   program,
   pc,
 }) => {
+  const [breakpoints, setBreakpoints] = useState(program.breakpoints);
+  const toggleBreakpoint = (line: number) => {
+    setBreakpoints((old) => {
+      const newValue = new Set(old);
+      if (newValue.has(line)) {
+        newValue.delete(line);
+      } else {
+        newValue.add(line);
+      }
+      // Megahack, don't do this in your job or you'll get fired :)
+      program.breakpoints = newValue;
+
+      return newValue;
+    });
+  };
+
   const instrToString = (instr: WhitespaceOp) => {
     const values: string[] = [instr.op.type];
     if ("value" in instr.op) {
@@ -265,13 +327,18 @@ const Instructions: FC<{ program: Program; pc: number }> = ({
   }, [pc]);
 
   return (
-    <ol className="flex-1 overflow-auto" ref={olRef}>
+    <ol className="flex-shrink-0 overflow-auto" ref={olRef}>
       {program.instructions.map((instr, idx) => (
         <li
           key={idx}
           className={idx === pc ? "bg-red-300 px-1 rounded" : "px-1"}
         >
-          {idx}. {instrToString(instr)}
+          <input
+            type="checkbox"
+            checked={breakpoints.has(idx)}
+            onChange={() => toggleBreakpoint(idx)}
+          />{" "}
+          {instrToString(instr)}
         </li>
       ))}
     </ol>
@@ -280,9 +347,9 @@ const Instructions: FC<{ program: Program; pc: number }> = ({
 
 const StackView: FC<{ stack: bigint[] }> = ({ stack }) => {
   return (
-    <div className="flex flex-col h-32  overflow-auto">
+    <div className="flex flex-col flex-1">
       <h2 className="font-bold border-b">Stack view</h2>
-      <ol>
+      <ol className="overflow-auto">
         {stack.map((value, idx) => (
           <li key={idx}>
             {idx}: {value.toString()}
@@ -295,9 +362,9 @@ const StackView: FC<{ stack: bigint[] }> = ({ stack }) => {
 
 const HeapView: FC<{ heap: bigint[] }> = ({ heap }) => {
   return (
-    <div className="flex flex-col max-h-32 overflow-auto">
+    <div className="flex flex-col max-h-full  flex-1">
       <h2 className="font-bold border-b">Heap view</h2>
-      <ol>
+      <ol className="overflow-auto">
         {Object.entries(heap).map(([idx, value]) => (
           <li key={idx}>
             {idx}: {value.toString()}
@@ -318,7 +385,7 @@ const InputView: FC<{
     <textarea
       value={value}
       onChange={(evt) => onChange(evt.target.value)}
-      className={requested ? "bg-red-300 p-1" : "p-1"}
+      className={requested ? "bg-red-300 p-1 max-h-48" : "p-1 max-h-48"}
     />
   </div>
 );
@@ -333,9 +400,9 @@ const OutputView: FC<{ value: string }> = ({ value }) => {
   }, [value]);
 
   return (
-    <div className="flex flex-col max-h-48">
+    <div className="flex flex-col h-48 overflow-hidden">
       <h2 className="font-bold border-b">Output view</h2>
-      <pre ref={ref} className="w-64 overflow-auto">
+      <pre ref={ref} className="overflow-auto max-w-full">
         {value}
       </pre>
     </div>

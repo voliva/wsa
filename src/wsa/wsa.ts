@@ -69,6 +69,7 @@ const resolveValue = (value: string | bigint) => {
 };
 
 const labelMap: Record<string, number> = {};
+export const compiledLabels: string[] = [];
 let labelIdx = 0;
 function numToStr(num: bigint | number) {
   return num
@@ -80,6 +81,7 @@ function numToStr(num: bigint | number) {
 function getTranslatedLabel(label: string) {
   if (!(label in labelMap)) {
     labelMap[label] = labelIdx++;
+    compiledLabels.push(label);
   }
   return numToStr(labelMap[label]) + "\n";
 }
@@ -204,19 +206,13 @@ async function include(
   filename: string,
   getIncludedStream: (filename: string) => LineStream
 ) {
-  const content = await (() => {
-    if (filename === "io") {
-      return compile(stringToLineStream(lib_io), getIncludedStream);
-    }
-    if (filename === "memory") {
-      return compile(stringToLineStream(lib_memory), getIncludedStream);
-    }
-
-    return compile(getIncludedStream(filename), getIncludedStream);
-  })();
-  const includeLabel = getInternalLabel();
-
-  return [jump(includeLabel), content, label(includeLabel)].join("");
+  if (filename === "io") {
+    return compile(stringToLineStream(lib_io), getIncludedStream);
+  }
+  if (filename === "memory") {
+    return compile(stringToLineStream(lib_memory), getIncludedStream);
+  }
+  return compile(getIncludedStream(filename), getIncludedStream);
 }
 function ret() {
   return `\n\t\n`;
@@ -277,6 +273,7 @@ export async function compile(
     onEnd = resolve;
   });
 
+  let prevInclude: Promise<string> = Promise.resolve("");
   inputStream((line) => {
     if (!line) {
       onEnd();
@@ -295,11 +292,17 @@ export async function compile(
 
     try {
       if (opcode == "include") {
-        results.push(include(mergedArgs, getIncludedStream));
+        prevInclude = prevInclude.then(() =>
+          include(mergedArgs, getIncludedStream)
+        );
+        results.push(prevInclude);
       } else {
         results.push(
-          (opcodes as any)[opcode](mergedArgs) ??
-            Promise.resolve(`{${opcode} ${mergedArgs}}`)
+          prevInclude.then(
+            () =>
+              (opcodes as any)[opcode](mergedArgs) ??
+              `{${opcode} ${mergedArgs}}`
+          )
         );
       }
     } catch (ex) {

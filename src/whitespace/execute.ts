@@ -21,19 +21,26 @@ export interface MachineState {
 export interface Program {
   instructions: WhitespaceOp[];
   labels: Record<string, number>;
+  breakpoints: Set<number>;
 }
 
 export function loadProgram(instructions: WhitespaceOp[]): Program {
   const labels: Record<string, number> = {};
+  const breakpoints = new Set<number>();
   instructions.forEach((instr, idx) => {
-    if (instr.imp === "flow" && instr.op.type === "mark") {
-      labels[instr.op.value] = idx + 1;
+    if (instr.imp === "flow") {
+      if (instr.op.type === "mark") {
+        labels[instr.op.value] = idx + 1;
+      } else if (instr.op.type === "dbg") {
+        breakpoints.add(idx);
+      }
     }
   });
 
   return {
     instructions,
     labels,
+    breakpoints,
   };
 }
 
@@ -75,6 +82,9 @@ export async function step(
         return stepStack(result, instruction);
     }
   })();
+  if (program.breakpoints.has(result.pc)) {
+    result.paused = true;
+  }
 
   return result;
 }
@@ -97,6 +107,41 @@ export async function runUntilPause(
     state = await step(program, state, io);
   }
   return state;
+}
+
+const isRet = (program: Program, state: MachineState) => {
+  const instruction = program.instructions[state.pc];
+  return instruction.imp === "flow" && instruction.op.type === "ret";
+};
+const isCall = (program: Program, state: MachineState) => {
+  const instruction = program.instructions[state.pc];
+  return instruction.imp === "flow" && instruction.op.type === "call";
+};
+
+export async function stepOut(
+  program: Program,
+  state: MachineState,
+  io: IO
+): Promise<MachineState> {
+  let calls = 1;
+  state.paused = false;
+  while (!state.halted && !state.paused && calls > 0) {
+    if (isCall(program, state)) {
+      calls++;
+    } else if (isRet(program, state)) {
+      calls--;
+    }
+    state = await step(program, state, io);
+  }
+  return state;
+}
+
+export async function stepOver(program: Program, state: MachineState, io: IO) {
+  if (isCall(program, state)) {
+    state = await step(program, state, io);
+    return stepOut(program, state, io);
+  }
+  return step(program, state, io);
 }
 
 function stepArithmetic(
@@ -151,7 +196,6 @@ function stepFlow(
       state.pc = labels[instruction.op.value];
       break;
     case "dbg":
-      state.paused = true;
       state.pc++;
       break;
     case "exit":

@@ -1,12 +1,12 @@
 valueinteger _STACK_HEAD 0
 valueinteger _HEAP_HEAD 4294967294
 
-label memory_init
 push 0
 dup
 store _STACK_HEAD
 store _HEAP_HEAD
-ret
+
+jump memory_lib_end
 
 ; arg: size
 ; Returns address of new block
@@ -380,3 +380,5 @@ label stack_get_head
 retrieve _STACK_HEAD
 retrieve
 ret
+
+label memory_lib_end
