@@ -65,9 +65,6 @@ export async function step(
   const result = { ...state };
   result.steps_taken++;
 
-  // console.log(result.steps_taken);
-  // console.log("step", instruction);
-
   await (() => {
     switch (instruction.imp) {
       case "arithmetic":
