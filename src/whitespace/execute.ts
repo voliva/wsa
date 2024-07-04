@@ -252,7 +252,7 @@ function stepStack(state: MachineState, instruction: StackOp): MachineState {
       state.stack.push(state.stack[pos]);
       break;
     }
-    case "doub":
+    case "dup":
       if (state.stack.length === 0) {
         throw new Error(
           `Stack op ${state.pc} failed: Can't duplicate on empty stack`

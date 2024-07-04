@@ -5,12 +5,12 @@ include io
 
 push 6
 call malloc
-doub
+dup
 storestr hello
 
 push 7
 call malloc
-doub
+dup
 storestr world!
 
 swap
@@ -21,7 +21,7 @@ pop
 
 push 4
 call malloc
-doub
+dup
 storestr hey
 
 call print_two
@@ -31,13 +31,13 @@ pop
 
 push 8
 call malloc
-doub
+dup
 storestr welcome
 
 push 10
 call malloc
-scpy 1
-scpy 1
+copy 1
+copy 1
 push 8
 call memcpy
 swap
@@ -52,14 +52,14 @@ call print_two
 exit
 
 label print_two
-doub
+dup
 call prints
 
 push ' '
 outc
 
 swap
-doub
+dup
 call printsln
 
 swap

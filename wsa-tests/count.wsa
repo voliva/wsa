@@ -1,9 +1,9 @@
 push 0
 label loop
-doub
+dup
 outn
 add 1
-doub
+dup
 test 10
 jumpz end
 push ' '

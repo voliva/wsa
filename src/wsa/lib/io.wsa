@@ -1,9 +1,9 @@
 label prints
 
 label prints_loop
-doub
-retrive
-doub
+dup
+retrieve
+dup
 jumpz prints_end
 outC
 add 1

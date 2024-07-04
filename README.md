@@ -82,9 +82,13 @@ It reusues [Burghard's WSA](https://github.com/wspace/burghard-wsa) as assembly 
 
 - Removes `pushs`, `ifoption`, `elseoption`, `endoption`, `elseifoption`, `debug_printstack`, `debug_printheap`
 - Adds:
-  - `scpy n`: Copy the nth element from the stack to the top of the stack (operand added in whitespace v0.3)
+  - `copy n`: Copy the nth element from the stack to the top of the stack (operand added in whitespace v0.3)
   - `slide n`: Slide n ittems off the stack, keeping the top one (operand added in whitespace v0.3)
   - `storestr str`: Stores `str` in the heap using the address defined in the top of the stack (and consuming it).
   - `debugger`: Signals the interpreter to pause execution at that point.
 - Modifies:
   - Strings (labels, string literals) don't need to be wrapped between ""
+  - `retrive` renamed to `retrieve`.
+  - `doub` renamed to `dup`.
+  - `inc` renamed to `readc`.
+  - `inn` renamed to `readn`.

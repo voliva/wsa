@@ -15,9 +15,9 @@ cat
 cat
 label loop
 push 4294967294
-inc
-retrive 4294967294
-doub
+readc
+retrieve 4294967294
+dup
 outc
 jumpnp loop
 
@@ -44,9 +44,9 @@ store +1
 push 1
 store 0
 call malloc
-doub
+dup
 storestr hello world!
-doub
+dup
 store +1
 push 1
 store 0
@@ -62,7 +62,7 @@ store +1
 push 1
 store 0
 call malloc
-doub
+dup
 storestr hello
 
 push 7
@@ -70,7 +70,7 @@ store +1
 push 1
 store 0
 call malloc
-doub
+dup
 storestr world!
 
 swap
@@ -87,7 +87,7 @@ store +1
 push 1
 store 0
 call malloc
-doub
+dup
 storestr hey
 
 call print_two
@@ -103,7 +103,7 @@ store +1
 push 1
 store 0
 call malloc
-doub
+dup
 storestr welcome
 
 call print_two
@@ -111,7 +111,7 @@ call print_two
 exit
 
 label print_two
-doub
+dup
 store +1
 push 1
 store 0
@@ -121,7 +121,7 @@ push ' '
 outc
 
 swap
-doub
+dup
 store +1
 push 1
 store 0

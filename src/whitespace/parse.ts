@@ -64,7 +64,7 @@ export function parseWhitespaceProgram(program: string) {
         {
           imp: "stack",
           op: {
-            type: nextChar == " " ? "doub" : nextChar === "\t" ? "swap" : "pop",
+            type: nextChar == " " ? "dup" : nextChar === "\t" ? "swap" : "pop",
           },
         },
         idx + 2,

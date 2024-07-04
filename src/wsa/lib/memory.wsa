@@ -3,7 +3,7 @@ valueinteger _HEAP_HEAD 4294967294
 
 label memory_init
 push 0
-doub
+dup
 store _STACK_HEAD
 store _HEAP_HEAD
 ret
@@ -14,8 +14,8 @@ label malloc
 push 1
 call stack_freeze
 
-retrive _HEAP_HEAD
-doub
+retrieve _HEAP_HEAD
+dup
 jumpz malloc_empty
 
 ; find an entry in-between two blocks where I can fit
@@ -26,21 +26,21 @@ label malloc_find_empty
 ; we need to check `&head+head.size+2 + size+2 < &prev`
 ; then store in `&head+head.size+2`, and update &prev.next
 ; get &head
-scpy 1
+copy 1
 ; get head.size
-doub
+dup
 add 1
-retrive
+retrieve
 ; &head + head.size
 add
 add 2
 ; save `&head+head.size+2` for later
-doub
+dup
 call stack_get_head
 add
 add 2
 ; we have 2 extra elements in the stack. Get &prev
-scpy 2
+copy 2
 sub
 jumpnz malloc_in_between
 ; the spot is not lare enough, remove the `&head+head.size+2`
@@ -48,9 +48,9 @@ pop
 ; remove &prev
 pop
 ; get next head
-doub
-retrive
-doub
+dup
+retrieve
+dup
 jumpz malloc_end_chain
 ; satisfy invariant [&head,&prev]: Previous head is now prev
 swap
@@ -61,15 +61,15 @@ label malloc_end_chain
 ; remove the 0 (head.next)
 pop
 ; head = &head - `size` - 2
-doub
+dup
 call stack_get_head
 sub
 sub 2
-doub
+dup
 ; size = `size`
 call stack_get_head
 ; prev = &head
-scpy 3
+copy 3
 ; next = 0
 push 0
 ; Perform call
@@ -83,7 +83,7 @@ label malloc_in_between
 swap
 call stack_get_head
 swap
-scpy 3
+copy 3
 ; Perform call
 call malloc_allocate
 slide 1
@@ -97,7 +97,7 @@ push _HEAP_HEAD
 call stack_get_head
 sub
 sub 2
-doub
+dup
 ; size = `size`
 call stack_get_head
 ; prev = _HEAP_HEAD
@@ -107,7 +107,7 @@ push 0
 ; Perform call
 call malloc_allocate
 pop
-; In stack we have the head of the element, because of the doub performed after calculating it
+; In stack we have the head of the element, because of the dup performed after calculating it
 
 label malloc_end
 ; Assuming we have addr of head on stack
@@ -121,16 +121,16 @@ ret
 ; Returns head
 label malloc_allocate
 ; Store `next` to &`head`
-scpy 3
+copy 3
 swap
 store
 ; Stack [head, size, prev]
 ; Store &`head` to &`prev`
-scpy 2
+copy 2
 store
 ; Stack [head, size]
 ; Store `size` to &`head`+1
-scpy 1
+copy 1
 add 1
 swap
 store
@@ -142,12 +142,12 @@ ret
 label mfree
 ; Load [&target, &initial_prev]
 sub 2
-doub
+dup
 push _HEAP_HEAD
 call memory_find_prev
 ; As a result we have [.. &prev]
 ; if it's 0 we've reached the end without finding it
-doub
+dup
 jumppn mfree_found
 pop
 pop
@@ -157,7 +157,7 @@ ret
 label mfree_found
 ; set prev.next to data_pointer.next
 swap
-retrive
+retrieve
 store
 push 1
 ret
@@ -165,19 +165,19 @@ ret
 ; args: source, dest, size
 label memcpy
 ; invariant [&end_dest,&dest,&source]
-scpy 1
+copy 1
 add
 swap
-scpy 2
+copy 2
 
 label memcpy_copy_next
-scpy 2
-scpy 2
+copy 2
+copy 2
 sub
 jumpz memcpy_end
-doub
-retrive
-scpy 2
+dup
+retrieve
+copy 2
 swap
 store
 
@@ -198,16 +198,16 @@ ret
 ; args: dest, value, size
 label memset
 ; invariant [value,&end_dest,&dest]
-scpy 2
+copy 2
 add
-scpy 2
+copy 2
 label memset_set_next
-doub
-scpy 2
+dup
+copy 2
 sub
 jumpz memset_end
-doub
-scpy 3
+dup
+copy 3
 store
 add 1
 jump memset_set_next
@@ -245,7 +245,7 @@ call stack_get_head
 call malloc
 ; On stack now we have [&dest]
 ; We have to keep the new address to return it at the end
-doub
+dup
 ; prepare stack [&source &dest size]
 push -1
 call stack_get
@@ -270,10 +270,10 @@ ret
 ; Invariant stack: [&target, &prev]
 ; Will result in stack: [&prev]
 label memory_find_prev
-doub
-retrive
+dup
+retrieve
 ; if it's 0 we've reached the end without finding it
-doub
+dup
 jumppn memory_find_check
 pop
 pop
@@ -283,10 +283,10 @@ pop
 push 0
 ret
 label memory_find_check
-scpy 2
+copy 2
 sub
 jumpz memory_found
-retrive
+retrieve
 jump memory_find_prev
 label memory_found
 ; set prev.next to data_pointer.next
@@ -296,15 +296,15 @@ ret
 
 ; args: length
 label stack_freeze
-doub
-retrive _STACK_HEAD
+dup
+retrieve _STACK_HEAD
 add
-doub
+dup
 store _STACK_HEAD
 swap
 ; [a,b,c,d,H,L]
 label stack_freeze_loop
-doub
+dup
 jumpz stack_freeze_end
 sub 1
 ; I can't slide keeping 2 values, which are important on the loop
@@ -312,8 +312,8 @@ sub 1
 push 1
 swap
 call stack_set
-doub
-scpy 2
+dup
+copy 2
 store
 slide 1
 sub 1
@@ -328,33 +328,33 @@ ret
 ; args: length
 label stack_restore
 ; store length on +1
-doub
+dup
 push 1
 swap
 call stack_set
 sub 1
 label stack_restore_loop
-doub
-retrive _STACK_HEAD
+dup
+retrieve _STACK_HEAD
 swap
 sub
-retrive
+retrieve
 swap
 sub 1
-doub
+dup
 jumppz stack_restore_loop
 pop
-retrive _STACK_HEAD
-doub
+retrieve _STACK_HEAD
+dup
 add 1
-retrive
+retrieve
 sub
 store _STACK_HEAD
 ret
 
 ; args: length
 label stack_discard
-retrive _STACK_HEAD
+retrieve _STACK_HEAD
 swap
 sub
 store _STACK_HEAD
@@ -362,21 +362,21 @@ ret
 
 ; args: offset
 label stack_get
-retrive _STACK_HEAD
+retrieve _STACK_HEAD
 add
-retrive
+retrieve
 ret
 
 ; args: offset value
 label stack_set
 swap
-retrive _STACK_HEAD
+retrieve _STACK_HEAD
 add
 swap
 store
 ret
 
 label stack_get_head
-retrive _STACK_HEAD
-retrive
+retrieve _STACK_HEAD
+retrieve
 ret

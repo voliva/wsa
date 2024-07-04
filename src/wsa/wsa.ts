@@ -3,10 +3,10 @@ import lib_memory from "./lib/memory.wsa?raw";
 
 const opcodes = {
   push,
-  doub,
+  dup,
   swap,
   pop,
-  scpy,
+  copy,
   slide,
   label,
   add,
@@ -16,7 +16,7 @@ const opcodes = {
   mod,
   store,
   storestr,
-  retrive,
+  retrieve,
   call,
   jump,
   jumpz,
@@ -30,8 +30,8 @@ const opcodes = {
   exit,
   outn,
   outc,
-  inn,
-  inc,
+  readn,
+  readc,
   valuestring,
   valueinteger,
   debugger: _debugger,
@@ -101,13 +101,13 @@ function push(value: string | bigint) {
 function pop() {
   return ` \n\n`;
 }
-function doub() {
+function dup() {
   return ` \n `;
 }
 function swap() {
   return " \n\t";
 }
-function scpy(value: string | bigint) {
+function copy(value: string | bigint) {
   return " \t " + number(BigInt(resolveValue(value)));
 }
 function slide(value: string | bigint) {
@@ -165,11 +165,11 @@ function storestr(value: string) {
   return (
     (value + "\0")
       .split("")
-      .map((v) => doub() + push(BigInt(v.charCodeAt(0))) + store() + add(1n))
+      .map((v) => dup() + push(BigInt(v.charCodeAt(0))) + store() + add(1n))
       .join("") + pop()
   );
 }
-function retrive(value: string | bigint) {
+function retrieve(value: string | bigint) {
   return pushIfDefined(value) + "\t\t\t";
 }
 function call(label: string) {
@@ -230,10 +230,10 @@ function outn() {
 function outc() {
   return "\t\n  ";
 }
-function inn() {
+function readn() {
   return "\t\n\t\t";
 }
-function inc() {
+function readc() {
   return "\t\n\t ";
 }
 function valuestring(args: string) {
