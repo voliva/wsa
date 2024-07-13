@@ -40,16 +40,10 @@ truth-machine
 include memory
 include io
 push 100
-store +1
-push 1
-store 0
 call malloc
 dup
 storestr hello world!
 dup
-store +1
-push 1
-store 0
 call printsln
 pop
 
@@ -58,17 +52,11 @@ include memory
 include io
 
 push 6
-store +1
-push 1
-store 0
 call malloc
 dup
 storestr hello
 
 push 7
-store +1
-push 1
-store 0
 call malloc
 dup
 storestr world!
@@ -76,32 +64,20 @@ storestr world!
 swap
 call print_two
 
-store +1
-push 1
-store 0
 call mfree
 pop
 
 push 4
-store +1
-push 1
-store 0
 call malloc
 dup
 storestr hey
 
 call print_two
 
-store +1
-push 1
-store 0
 call mfree
 pop
 
 push 8
-store +1
-push 1
-store 0
 call malloc
 dup
 storestr welcome
@@ -112,9 +88,6 @@ exit
 
 label print_two
 dup
-store +1
-push 1
-store 0
 call prints
 
 push ' '
@@ -122,9 +95,6 @@ outc
 
 swap
 dup
-store +1
-push 1
-store 0
 call printsln
 
 swap

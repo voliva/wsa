@@ -2,6 +2,7 @@ import { FC, useEffect, useRef, useState } from "react";
 import { Button, useThrottle } from "../lib";
 import {
   initializeState,
+  MachineState,
   Program,
   step,
   stepOut,
@@ -9,6 +10,7 @@ import {
 } from "../whitespace/execute";
 import { Instructions } from "./InstructionsView";
 import { useIo } from "./useIo";
+import { FlowOp } from "../whitespace";
 
 export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
   const [state, setState] = useState(initializeState());
@@ -18,6 +20,18 @@ export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
   const debounceSetState = useThrottle(setState, 100);
   const stopped = useRef(false);
   const [running, setRunning] = useState(false);
+  async function captureExceptions(fn: () => void | Promise<void>) {
+    try {
+      return await fn();
+    } catch (ex) {
+      console.error(ex);
+
+      "\nException triggered\n".split("").forEach(io.output.char);
+      if (ex instanceof Error) {
+        ex.message.split("").forEach(io.output.char);
+      }
+    }
+  }
   async function run() {
     let lastBreath = Date.now();
     const breathe = () => {
@@ -32,23 +46,25 @@ export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
     stepState.paused = false;
     stopped.current = false;
     setRunning(true);
-    while (!stepState.halted && !stepState.paused && !stopped.current) {
-      stepState = await step(program, stepState, io);
-      if (stopped.current) break;
-      debounceSetState(stepState);
-      await breathe();
-    }
+    await captureExceptions(async () => {
+      while (!stepState.halted && !stepState.paused && !stopped.current) {
+        stepState = await step(program, stepState, io);
+        if (stopped.current) break;
+        debounceSetState(stepState);
+        await breathe();
+      }
+    });
     setRunning(false);
   }
 
-  async function doStepOver() {
-    setState(await stepOver(program, state, io));
+  function doStepOver() {
+    captureExceptions(async () => setState(await stepOver(program, state, io)));
   }
-  async function doStepIn() {
-    setState(await step(program, state, io));
+  function doStepIn() {
+    captureExceptions(async () => setState(await step(program, state, io)));
   }
-  async function doStepOut() {
-    setState(await stepOut(program, state, io));
+  function doStepOut() {
+    captureExceptions(async () => setState(await stepOut(program, state, io)));
   }
   function pause() {
     stopped.current = true;
@@ -64,15 +80,15 @@ export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
     const handleKeyboardEvt = (evt: KeyboardEvent) => {
       switch (evt.key) {
         case "c":
-          return run();
+          return running || run();
         case "s":
-          return doStepOver();
+          return running || doStepOver();
         case "i":
-          return doStepIn();
+          return running || doStepIn();
         case "o":
-          return doStepOut();
+          return running || state.callStack.length === 0 || doStepOut();
         case "p":
-          return pause();
+          return !running || pause();
         case "r":
           return restart();
       }
@@ -101,7 +117,10 @@ export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
           <Button onClick={doStepIn} disabled={running}>
             Step <u>i</u>n
           </Button>
-          <Button onClick={doStepOut} disabled={running}>
+          <Button
+            onClick={doStepOut}
+            disabled={running || state.callStack.length === 0}
+          >
             Step <u>o</u>ut
           </Button>
           <Button onClick={restart}>
@@ -113,6 +132,7 @@ export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
             <StackView stack={state.stack} />
             <HeapView heap={state.heap} />
           </div>
+          <CallStackView value={getCallStack(program, state)} />
           <InputView
             value={inputQueue}
             requested={inputRequested}
@@ -155,6 +175,24 @@ const HeapView: FC<{ heap: bigint[] }> = ({ heap }) => {
   );
 };
 
+function getCallStack(program: Program, state: MachineState) {
+  const callInstructions = state.callStack.map(
+    (instr) => program.instructions[instr - 1]
+  ) as FlowOp[];
+
+  return callInstructions.map((v) => (v.op.type === "call" ? v.op.value : ""));
+}
+const CallStackView: FC<{ value: string[] }> = ({ value }) => {
+  return (
+    <div className="flex flex-col flex-0">
+      <h2 className="font-bold border-b">Call stack</h2>
+      <div className="whitespace-nowrap overflow-auto">
+        {value.map((label, i) => (i == 0 ? "" : " > ") + label)}&nbsp;
+      </div>
+    </div>
+  );
+};
+
 const InputView: FC<{
   value: string;
   requested: boolean;
@@ -164,7 +202,10 @@ const InputView: FC<{
     <h2 className="font-bold border-b">Input view</h2>
     <textarea
       value={value}
-      onChange={(evt) => onChange(evt.target.value)}
+      onChange={(evt) => {
+        onChange(evt.target.value);
+      }}
+      onKeyPress={(evt) => evt.stopPropagation()}
       className={requested ? "bg-red-300 p-1 max-h-48" : "p-1 max-h-48"}
     />
   </div>
