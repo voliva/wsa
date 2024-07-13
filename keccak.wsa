@@ -257,6 +257,7 @@ label keccak_round
       copy 2
       mul 3
       add
+      mod 5
       copy 2
       mul 5
       add
@@ -264,7 +265,7 @@ label keccak_round
       swap
       sub
       swap
-      store
+      call stack_set
       ; [&r, &A, B[24..0]] [RC, x, y]
       sub 1
     jump keccak_round_rp_y
@@ -306,7 +307,7 @@ label keccak_round
     call stack_get
     call bitwise_xor
     copy 1
-    push 25
+    push -25
     call stack_get
     add
     swap
@@ -321,7 +322,7 @@ label keccak_round
   ; [&r, &A] [RC]
   ; iota step
   call stack_get_head
-  call retrieve
+  retrieve
   call bitwise_xor
   call stack_get_head
   swap
@@ -364,6 +365,6 @@ label fill_input_end
 pop
 
 copy 1
-add 25
+add 24
 swap
 call keccak_round
