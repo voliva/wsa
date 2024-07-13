@@ -202,10 +202,14 @@ function jumppn(jmpLabel: string) {
   return [jumpz(s1), jump(jmpLabel), label(s1)].join("");
 }
 
+const includedFiles = new Set<string>();
 async function include(
   filename: string,
   getIncludedStream: (filename: string) => LineStream
 ) {
+  if (includedFiles.has(filename)) return "";
+  includedFiles.add(filename);
+
   if (filename === "io") {
     return compile(stringToLineStream(lib_io), getIncludedStream);
   }
