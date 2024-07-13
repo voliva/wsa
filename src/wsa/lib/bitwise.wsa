@@ -1,0 +1,177 @@
+include memory
+
+jump bitwise_lib_end
+
+; args n, m, mod
+; returns n rotated m positions to the left module mod
+label bitwise_rotl
+  ; calculate top value = 2^mod, consuming mod
+  call __bitwise_exp_2
+
+  swap
+  copy 2
+  swap
+  ; [n, top, n, m]
+  label bitwise_rotl_loop
+    dup
+    jumpz bitwise_rotl_end
+    sub 1
+    swap
+    copy 2
+    call bitwise_rotl_one
+    swap
+    jump bitwise_rotl_loop
+  label bitwise_rotl_end
+  pop
+  slide 2
+ret
+
+; args n
+label __bitwise_exp_2
+  push 1
+  swap
+  label __bitwise_exp_2_loop
+    dup
+    jumpz __bitwise_exp_2_loop_end
+    sub 1
+    swap
+    mul 2
+    swap
+    jump __bitwise_exp_2_loop
+  label __bitwise_exp_2_loop_end
+  pop
+ret
+
+; args n, top
+; returns n rotated one position to the left module log(top)
+label bitwise_rotl_one
+  swap
+  mul 2
+  dup
+  copy 2
+  sub
+  jumpn bitwise_rotl_one_no_overflow
+  swap
+  sub
+  add 1
+ret
+  label bitwise_rotl_one_no_overflow
+  swap
+  pop
+ret
+
+; args a, b
+label bitwise_xor
+  ; we need to modify 3 values, can't do with just the stack
+  push 2
+  call stack_freeze
+  push 0
+  push 1
+  ; [a, b] [r, p]
+  label bitwise_xor_loop
+    swap
+    copy 1
+    ; [a, b] [p, r, p]
+    push -1
+    call stack_get
+    call stack_get_head
+    add
+    dup
+    jumpz bitwise_xor_end
+    mod 2
+    mul
+    add
+    ; [a, b] [p, r]
+    swap
+    mul 2
+
+    ; update [a,b]
+    push -1
+    call stack_get
+    div 2
+    push -1
+    swap
+    call stack_set
+    call stack_get_head
+    div 2
+    call stack_set_head
+  jump bitwise_xor_loop
+  label bitwise_xor_end
+  ; [a, b] [p, r, p, a+b]
+  pop
+  pop
+  slide 1
+  push 2
+  call stack_discard
+ret
+
+; args a, b
+label bitwise_and
+  push 2
+  call stack_freeze
+  push 0
+  push 1
+  ; [a, b] [r, p]
+  label bitwise_and_loop
+    swap
+    copy 1
+    ; [a, b] [p, r, p]
+    push -1
+    call stack_get
+    dup
+    jumpz bitwise_and_end
+    mod 2
+    call stack_get_head
+    dup
+    jumpz bitwise_and_end
+    mod 2
+    add
+    div 2
+    mul
+    add
+    ; [a, b] [p, r]
+    swap
+    mul 2
+
+    ; update [a,b]
+    push -1
+    call stack_get
+    div 2
+    push -1
+    swap
+    call stack_set
+    call stack_get_head
+    div 2
+    call stack_set_head
+  jump bitwise_and_loop
+  label bitwise_and_end
+  ; [a, b] [p, r, p, a+1]
+  pop
+  pop
+  slide 1
+  push 2
+  call stack_discard
+ret
+
+; args n, mod
+label bitwise_not
+  call __bitwise_exp_2
+  sub 1
+  swap
+  sub
+ret
+
+label bitwise_lib_end
+
+; retrieve _STACK_HEAD
+; add 1
+; dup
+; readn
+; retrieve
+; retrieve _STACK_HEAD
+; add 1
+; dup
+; readn
+; retrieve
+; call bitwise_not
+; outn

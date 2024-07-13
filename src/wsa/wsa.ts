@@ -1,5 +1,6 @@
 import lib_io from "./lib/io.wsa?raw";
 import lib_memory from "./lib/memory.wsa?raw";
+import lib_bitwise from "./lib/bitwise.wsa?raw";
 
 const opcodes = {
   push,
@@ -215,6 +216,9 @@ async function include(
   }
   if (filename === "memory") {
     return compile(stringToLineStream(lib_memory), getIncludedStream);
+  }
+  if (filename === "bitwise") {
+    return compile(stringToLineStream(lib_bitwise), getIncludedStream);
   }
   return compile(getIncludedStream(filename), getIncludedStream);
 }
