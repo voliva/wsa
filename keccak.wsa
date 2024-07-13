@@ -105,13 +105,12 @@ label keccak_store_n
   call stack_discard
 ret
 
-; args &A, RC
+; args RC, &r, &A
 label keccak_round
-  swap
-  push 1
+  push 2
   call stack_freeze
   push 4
-  ; [&A] [RC, x]
+  ; [&r, &A] [RC, x]
   label keccak_round_c
     dup
     jumpn keccak_round_c_end
@@ -156,12 +155,12 @@ label keccak_round
   jump keccak_round_c
   label keccak_round_c_end
   pop
-  ; [&A] [RC, C[4..0]]
+  ; [&r, &A] [RC, C[4..0]]
 
   push 5
   call stack_freeze
   push 4
-  ; [&A, C[4..0]] [RC, x]
+  ; [&r, &A, C[4..0]] [RC, x]
   label keccak_round_d
     dup
     jumpn keccak_round_d_end
@@ -189,14 +188,14 @@ label keccak_round
   jump keccak_round_d
   label keccak_round_d_end
   pop
-  ; [&A, C[4..0]] [RC, D[4..0]]
+  ; [&r, &A, C[4..0]] [RC, D[4..0]]
 
   push 5
   call stack_discard
   push 5
   call stack_freeze
   push 24
-  ; [&A, D[4..0]] [RC, {x,y}]
+  ; [&r, &A, D[4..0]] [RC, {x,y}]
   label keccak_round_theta
     dup
     jumpn keccak_round_theta_end
@@ -219,8 +218,117 @@ label keccak_round
     sub 1
   jump keccak_round_theta
   label keccak_round_theta_end
+  pop
 
-  
+  push 5
+  call stack_discard
+  push 25
+  call stack_reserve
+  push 4
+  ; [&r, &A, B[24..0]] [RC, x]
+  label keccak_round_rp_x
+    dup
+    jumpn keccak_round_rp_x_end
+    push 4
+    ; [&r, &A, B[24..0]] [RC, x, y]
+    label keccak_round_rp_y
+      dup
+      jumpn keccak_round_rp_y_end
+      copy 1
+      mul 5
+      copy 1
+      add
+      ; [&r, &A, B[24..0]] [RC, x, y, {x,y}]
+      dup
+      push -25
+      call stack_get
+      add
+      retrieve
+      swap
+      push -26
+      call stack_get
+      add
+      retrieve
+      push 64
+      call bitwise_rotl
+      ; [&r, &A, B[24..0]] [RC, x, y, B[y,2*x+3*y]]
+      copy 2
+      mul 2
+      copy 2
+      mul 3
+      add
+      copy 2
+      mul 5
+      add
+      push 0
+      swap
+      sub
+      swap
+      store
+      ; [&r, &A, B[24..0]] [RC, x, y]
+      sub 1
+    jump keccak_round_rp_y
+    label keccak_round_rp_y_end
+    pop
+    sub 1
+  jump keccak_round_rp_x
+  label keccak_round_rp_x_end
+  pop
+
+  push 24
+  ; [&r, &A, B[24..0]] [RC, {x,y}]
+  label keccak_round_x
+    dup
+    jumpn keccak_round_x_end
+    dup
+    add 5
+    mod 25
+    push 0
+    swap
+    sub
+    call stack_get
+    ; [&r, &A, B[24..0]] [RC, {x,y}, B[x+1,y]]
+    push 64
+    call bitwise_not
+    copy 1
+    add 10
+    mod 25
+    push 0
+    swap
+    sub
+    call stack_get
+    ; [&r, &A, B[24..0]] [RC, {x,y}, ~B[x+1,y], B[x+2,y]]
+    call bitwise_and
+    copy 1
+    push 0
+    swap
+    sub
+    call stack_get
+    call bitwise_xor
+    copy 1
+    push 25
+    call stack_get
+    add
+    swap
+    store
+    sub 1
+    jump keccak_round_x
+  label keccak_round_x_end
+  pop
+  push 25
+  call stack_discard
+
+  ; [&r, &A] [RC]
+  ; iota step
+  call stack_get_head
+  call retrieve
+  call bitwise_xor
+  call stack_get_head
+  swap
+  store
+
+  push 2
+  call stack_discard
 ret
 
 ; args m, n
@@ -236,7 +344,26 @@ label __keccak_circle
   mod
 ret
 
-
 label keccak_lib_end
 
 call keccak_init
+push 25
+call malloc
+push 24
+label fill_input
+  dup
+  jumpn fill_input_end
+  dup
+  copy 2
+  add
+  copy 1
+  store
+  sub 1
+  jump fill_input
+label fill_input_end
+pop
+
+copy 1
+add 25
+swap
+call keccak_round
