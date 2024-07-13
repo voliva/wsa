@@ -156,7 +156,7 @@ const StackView: FC<{ stack: bigint[] }> = ({ stack }) => {
   return (
     <div className="flex flex-col flex-1">
       <h2 className="font-bold border-b">Stack view</h2>
-      <ol className="overflow-auto font-mono">
+      <ol className="overflow-auto font-mono whitespace-nowrap">
         {stack.map((value, idx) => (
           <li key={idx}>
             {idx}: {memoryValueToString(value)}
@@ -171,7 +171,7 @@ const HeapView: FC<{ heap: bigint[] }> = ({ heap }) => {
   return (
     <div className="flex flex-col max-h-full  flex-1">
       <h2 className="font-bold border-b">Heap view</h2>
-      <ol className="overflow-auto  font-mono">
+      <ol className="overflow-auto font-mono whitespace-nowrap">
         {Object.entries(heap).map(([idx, value]) => (
           <li key={idx}>
             {idx}: {memoryValueToString(value)}
