@@ -145,14 +145,21 @@ export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
   );
 };
 
+function memoryValueToString(value: bigint) {
+  const paddedValue = value.toString().padStart(3, "\u{00A0}");
+  if (value > 32n && value < 127n) {
+    return paddedValue + " " + String.fromCharCode(Number(value));
+  }
+  return value.toString();
+}
 const StackView: FC<{ stack: bigint[] }> = ({ stack }) => {
   return (
     <div className="flex flex-col flex-1">
       <h2 className="font-bold border-b">Stack view</h2>
-      <ol className="overflow-auto">
+      <ol className="overflow-auto font-mono">
         {stack.map((value, idx) => (
           <li key={idx}>
-            {idx}: {value.toString()}
+            {idx}: {memoryValueToString(value)}
           </li>
         ))}
       </ol>
@@ -164,10 +171,10 @@ const HeapView: FC<{ heap: bigint[] }> = ({ heap }) => {
   return (
     <div className="flex flex-col max-h-full  flex-1">
       <h2 className="font-bold border-b">Heap view</h2>
-      <ol className="overflow-auto">
+      <ol className="overflow-auto  font-mono">
         {Object.entries(heap).map(([idx, value]) => (
           <li key={idx}>
-            {idx}: {value.toString()}
+            {idx}: {memoryValueToString(value)}
           </li>
         ))}
       </ol>
