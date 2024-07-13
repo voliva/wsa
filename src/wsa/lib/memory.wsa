@@ -381,4 +381,10 @@ retrieve _STACK_HEAD
 retrieve
 ret
 
+label stack_set_head
+retrieve _STACK_HEAD
+swap
+store
+ret
+
 label memory_lib_end
