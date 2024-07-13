@@ -123,7 +123,7 @@ label bitwise_and
     mod 2
     call stack_get_head
     dup
-    jumpz bitwise_and_end
+    jumpz bitwise_and_end_double
     mod 2
     add
     div 2
@@ -144,6 +144,8 @@ label bitwise_and
     div 2
     call stack_set_head
   jump bitwise_and_loop
+  label bitwise_and_end_double
+  pop
   label bitwise_and_end
   ; [a, b] [p, r, p, a+1]
   pop
