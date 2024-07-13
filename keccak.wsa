@@ -1,4 +1,13 @@
 include memory
+include bitwise
+
+; https://keccak.team/keccak_specs_summary.html
+; SHA3-256: r=1088 c=512, output length = 256, Mbits=01, d=0x06, b=1600, w=64, rounds=24
+; https://emn178.github.io/online-tools/keccak_256.html
+; https://github.com/mjosaarinen/tiny_sha3/blob/master/sha3.c
+; https://github.com/emn178/js-sha3/blob/master/src/sha3.js
+
+jump keccak_lib_end
 
 ; returns &keccak
 label keccak_init
@@ -95,3 +104,139 @@ label keccak_store_n
   push 1
   call stack_discard
 ret
+
+; args &A, RC
+label keccak_round
+  swap
+  push 1
+  call stack_freeze
+  push 4
+  ; [&A] [RC, x]
+  label keccak_round_c
+    dup
+    jumpn keccak_round_c_end
+    dup
+    mul 5
+    call stack_get_head
+    add
+    ; [RC, x, &A[x,0]]
+    dup
+    retrieve
+    swap
+    add 1
+    swap
+    ; [RC, x, &A[x,1], A[x,0]]
+    copy 1
+    retrieve
+    call bitwise_xor
+    swap
+    add 1
+    swap
+    ; [RC, x, &A[x,2], C[wip]]
+    copy 1
+    retrieve
+    call bitwise_xor
+    swap
+    add 1
+    swap
+    ; [RC, x, &A[x,3], C[wip]]
+    copy 1
+    retrieve
+    call bitwise_xor
+    swap
+    add 1
+    swap
+    ; [RC, x, &A[x,4], C[wip]]
+    swap
+    retrieve
+    call bitwise_xor
+    ; [RC, x, C[x]]
+    swap
+    sub 1
+  jump keccak_round_c
+  label keccak_round_c_end
+  pop
+  ; [&A] [RC, C[4..0]]
+
+  push 5
+  call stack_freeze
+  push 4
+  ; [&A, C[4..0]] [RC, x]
+  label keccak_round_d
+    dup
+    jumpn keccak_round_d_end
+    dup
+    add 1
+    mod 5
+    push 0
+    swap
+    sub
+    call stack_get
+    push 1
+    push 64
+    call bitwise_rotl
+    push 5
+    copy 2
+    sub 1
+    call __keccak_circle
+    push 0
+    swap
+    sub
+    call stack_get
+    call bitwise_xor
+    swap
+    sub 1
+  jump keccak_round_d
+  label keccak_round_d_end
+  pop
+  ; [&A, C[4..0]] [RC, D[4..0]]
+
+  push 5
+  call stack_discard
+  push 5
+  call stack_freeze
+  push 24
+  ; [&A, D[4..0]] [RC, {x,y}]
+  label keccak_round_theta
+    dup
+    jumpn keccak_round_theta_end
+    dup
+    push -5
+    call stack_get
+    add
+    ; [RC, {x,y}, &A[x,y]]
+    dup
+    retrieve
+    copy 2
+    div 5
+    push 0
+    swap
+    sub
+    call stack_get
+    call bitwise_xor
+    ; [RC, {x,y}, &A[x,y], A[x,y]^D[x]]
+    store
+    sub 1
+  jump keccak_round_theta
+  label keccak_round_theta_end
+
+  
+ret
+
+; args m, n
+; returns n % m, with guaranteed positive result
+label __keccak_circle
+  dup
+  jumppz __keccak_circle_positive
+  copy 1
+  add
+  jump __keccak_circle
+  label __keccak_circle_positive
+  swap
+  mod
+ret
+
+
+label keccak_lib_end
+
+call keccak_init
