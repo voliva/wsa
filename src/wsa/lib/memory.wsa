@@ -326,6 +326,13 @@ pop
 ret
 
 ; args: length
+label stack_reserve
+retrieve _STACK_HEAD
+add
+store _STACK_HEAD
+ret
+
+; args: length
 label stack_restore
 ; store length on +1
 dup
