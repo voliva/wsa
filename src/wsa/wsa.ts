@@ -191,8 +191,7 @@ function jumpp(label: string) {
   return [push(0n), swap(), sub(), jumpn(label)].join("");
 }
 function jumpnz(jmpLabel: string) {
-  const s1 = getInternalLabel();
-  return [jumpp(s1), jump(jmpLabel), label(s1)].join("");
+  return [sub(1n), jumpn(jmpLabel)].join("");
 }
 function jumppz(jmpLabel: string) {
   const s1 = getInternalLabel();
