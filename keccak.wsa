@@ -365,6 +365,8 @@ label fill_input_end
 pop
 
 copy 1
+retrieve
+copy 2
 add 24
-swap
+copy 2
 call keccak_round
