@@ -353,35 +353,101 @@ label keccak_f
 ret
 
 ; args &MBytes, len
+; Returns |P|, &P - Where P[i] is a block of 17 64-bit numbers.
 label keccak_padding
-; Assuming block size of r/w = 17
+  ; Padding turns &MBytes into P, which is an array of arrays
+  ; Each P[i] is a block of r/w=17 elements.
+  ; Each P[i][j] is a 64-bit word.
+  ; We first need to convert MBytes into a 64-bit array.
+  ; Adding `d=0x06` just after it finishes
+  ; Then padding it with 0s so that the length is divisible by 17
+  ; Then XOR the last byte with 0x80.
+
+  ; Calculate actual number of blocks
   dup
-  copy 2
-  add
-  push 0x06
-  store
   add 1
   dup
-  mod 17
-  jumpz keccak_padding_xor
-  ; dest
-  dup
-  copy 2
-  add
-  ; value
-  push 0
-  ; size
-  copy 2
-  mod 17
-  push 17
+  div 8
   swap
-  sub
-  call memset
-  div 17
+  mod 8
+  jumpz keccak_padding_calc_blocks_8_zero
   add 1
+  label keccak_padding_calc_blocks_8_zero
+
+  dup
+  div 17
+  swap
+  mod 17
+  jumpz keccak_padding_calc_blocks_17_zero
+  add 1
+  label keccak_padding_calc_blocks_17_zero
+
+  dup
   mul 17
-  label keccak_padding_xor
-  ; xor the last position with 0x80
+  call malloc
+  ; [&MBytes, len, |P|, &P]
+
+  copy 1
+  mul 17
+  sub 1
+  ; [&MBytes, len, |P|, &P, {i,j}]
+  label keccak_padding_build_p
+    dup
+    jumpn keccak_padding_build_p_end
+    push 0
+    push 7
+    ; [&MBytes, len, |P|, &P, {i,j}, P[i][j], o]
+    label keccak_padding_build_pij
+      dup
+      jumpn keccak_padding_build_pij_end
+      swap
+      mul 0x100
+      ; [&MBytes, len, |P|, &P, {i,j}, o, P[i][j]]
+      copy 1
+      copy 3
+      mul 8
+      add
+      ; If it exceeds len, then it's 0
+      dup
+      copy 7
+      swap
+      sub
+      dup
+      jumpz keccak_padding_build_pij_exact
+      jumpn keccak_padding_build_pij_overflow
+      copy 7
+      add
+      retrieve
+      jump keccak_padding_build_pij_overflow_end
+      label keccak_padding_build_pij_overflow
+      pop
+      push 0
+      jump keccak_padding_build_pij_overflow_end
+      label keccak_padding_build_pij_exact
+      pop
+      push 0x06
+      label keccak_padding_build_pij_overflow_end
+      add
+      swap
+      sub 1
+    jump keccak_padding_build_pij
+    label keccak_padding_build_pij_end
+    pop
+    copy 2
+    copy 2
+    add
+    swap
+    store
+    sub 1
+  jump keccak_padding_build_p
+  label keccak_padding_build_p_end
+  pop
+
+  ; [&MBytes, len, |P|, &P]
+  ; XOR the last byte with 0x80
+  dup
+  copy 2
+  mul 17
   sub 1
   add
   dup
@@ -389,6 +455,43 @@ label keccak_padding
   push 0x80
   call bitwise_xor
   store
+
+  push 1
+  call stack_freeze
+  slide 2
+  push
+  call stack_restore
+ret
+
+; args &keccak, &MBytes, len
+label keccak
+  call keccak_padding
+  ; [&keccak, |P|, &P]
+
+  push 25
+  call malloc
+  dup
+  push 0
+  push 25
+  call memset
+  ; [&keccak, |P|, &P, &S]
+
+  push 0
+  label keccak_absorb
+    dup
+    copy 4
+    sub
+    jumpz keccak_absorb_end
+    dup
+    mul 17
+    copy 3
+    add
+    ; [&keccak, |P|, &P, &S, i, &P[i]]
+    ; ...
+    add 1
+  jump keccak_absorb
+  label keccak_absorb_end
+
 ret
 
 ; args m, n
