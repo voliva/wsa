@@ -17,7 +17,10 @@ export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
   const { inputQueue, inputRequested, output, io, setInputQueue, restartIo } =
     useIo();
 
-  const debounceSetState = useThrottle(setState, 100);
+  const debounceSetState = useThrottle(
+    (state: MachineState) => setState({ ...state }),
+    100
+  );
   const stopped = useRef(false);
   const [running, setRunning] = useState(false);
   async function captureExceptions(fn: () => void | Promise<void>) {
@@ -58,13 +61,25 @@ export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
   }
 
   function doStepOver() {
-    captureExceptions(async () => setState(await stepOver(program, state, io)));
+    captureExceptions(async () =>
+      setState({
+        ...(await stepOver(program, state, io)),
+      })
+    );
   }
   function doStepIn() {
-    captureExceptions(async () => setState(await step(program, state, io)));
+    captureExceptions(async () =>
+      setState({
+        ...(await step(program, state, io)),
+      })
+    );
   }
   function doStepOut() {
-    captureExceptions(async () => setState(await stepOut(program, state, io)));
+    captureExceptions(async () =>
+      setState({
+        ...(await stepOut(program, state, io)),
+      })
+    );
   }
   function pause() {
     stopped.current = true;
