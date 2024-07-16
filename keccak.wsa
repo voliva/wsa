@@ -350,6 +350,8 @@ label keccak_f
     add 1
   jump keccak_f_loop
   label keccak_f_loop_end
+  slide 2
+  pop
 ret
 
 ; args &MBytes, len
@@ -425,6 +427,7 @@ label keccak_padding
       jump keccak_padding_build_pij_overflow_end
       label keccak_padding_build_pij_exact
       pop
+      pop
       push 0x06
       label keccak_padding_build_pij_overflow_end
       add
@@ -459,7 +462,7 @@ label keccak_padding
   push 1
   call stack_freeze
   slide 2
-  push
+  push 1
   call stack_restore
 ret
 
@@ -487,11 +490,61 @@ label keccak
     copy 3
     add
     ; [&keccak, |P|, &P, &S, i, &P[i]]
-    ; ...
+    push 0
+    label keccak_absorb_y
+      push 0
+      label keccak_absorb_x
+        ; [&keccak, |P|, &P, &S, i, &P[i], y, x]
+        dup
+        sub 5
+        jumpz keccak_absorb_x_end
+        dup
+        copy 2
+        mul 5
+        add
+        dup
+        sub 17
+        jumpz keccak_absorb_y_end
+        copy 3
+        add
+        retrieve
+        ; [&keccak, |P|, &P, &S, i, &P[i], y, x, P[i][y][x]]
+        copy 2
+        copy 2
+        mul 5
+        add
+        copy 6
+        add
+        ; save the address for later
+        dup
+        copy 2
+        call bitwise_xor
+        store
+        pop
+        add 1
+        jump keccak_absorb_x
+      label keccak_absorb_x_end
+      pop
+      add 1
+      jump keccak_absorb_y
+    label keccak_absorb_y_end
+    slide 3
+    pop
+    ; [&keccak, |P|, &P, &S, i]
+    copy 4
+    copy 2
+    call keccak_f
     add 1
   jump keccak_absorb
   label keccak_absorb_end
+  pop
 
+  ; free P
+  copy 1
+  call mfree
+  pop
+  slide 2
+  ; [&keccak, &S]
 ret
 
 ; args m, n
@@ -526,9 +579,13 @@ label fill_input
 label fill_input_end
 pop
 
-copy 1
-retrieve
-copy 2
-add 24
-copy 2
-call keccak_round
+; copy 1
+; retrieve
+; copy 2
+; add 24
+; copy 2
+; call keccak_round
+
+; &keccak, &MBytes, len
+push 25
+call keccak
