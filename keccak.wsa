@@ -428,7 +428,8 @@ label keccak_padding
       label keccak_padding_build_pij_exact
       pop
       pop
-      push 0x06
+      ; The spec says d=0x06, but every implementation is using 0x01?
+      push 0x01
       label keccak_padding_build_pij_overflow_end
       add
       swap
@@ -447,7 +448,7 @@ label keccak_padding
   pop
 
   ; [&MBytes, len, |P|, &P]
-  ; XOR the last byte with 0x80
+  ; XOR the last byte with 0x80, which is actually the left-side one on the last.
   dup
   copy 2
   mul 17
@@ -455,7 +456,7 @@ label keccak_padding
   add
   dup
   retrieve
-  push 0x80
+  push 0x8000000000000000
   call bitwise_xor
   store
 
@@ -517,6 +518,7 @@ label keccak
         add
         ; save the address for later
         dup
+        retrieve
         copy 2
         call bitwise_xor
         store
@@ -579,13 +581,13 @@ label fill_input
 label fill_input_end
 pop
 
-; copy 1
-; retrieve
-; copy 2
-; add 24
-; copy 2
-; call keccak_round
+copy 1
+retrieve
+copy 2
+add 24
+copy 2
+call keccak_round
 
 ; &keccak, &MBytes, len
-push 25
-call keccak
+; push 25
+; call keccak

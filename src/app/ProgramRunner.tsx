@@ -161,11 +161,14 @@ export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
 };
 
 function memoryValueToString(value: bigint) {
-  const paddedValue = value.toString().padStart(3, "\u{00A0}");
   if (value > 32n && value < 127n) {
-    return paddedValue + " " + String.fromCharCode(Number(value));
+    return (
+      value.toString(16).padStart(3, "\u{00A0}") +
+      " " +
+      String.fromCharCode(Number(value))
+    );
   }
-  return value.toString();
+  return value.toString(16);
 }
 const StackView: FC<{ stack: bigint[] }> = ({ stack }) => {
   return (
@@ -189,7 +192,7 @@ const HeapView: FC<{ heap: bigint[] }> = ({ heap }) => {
       <ol className="overflow-auto font-mono whitespace-nowrap">
         {Object.entries(heap).map(([idx, value]) => (
           <li key={idx}>
-            {idx}: {memoryValueToString(value)}
+            {Number(idx).toString(16)}: {memoryValueToString(value)}
           </li>
         ))}
       </ol>
