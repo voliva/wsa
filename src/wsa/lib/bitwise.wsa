@@ -65,42 +65,58 @@ label bitwise_xor
   ; we need to modify 3 values, can't do with just the stack
   push 2
   call stack_freeze
+  retrieve _STACK_HEAD
+  dup
+  sub 1
+  swap
   push 0
   push 1
-  ; [a, b] [r, p]
+  ; [&a, &b, r, p]
   label bitwise_xor_loop
     swap
     copy 1
-    ; [a, b] [p, r, p]
-    push -1
-    call stack_get
-    call stack_get_head
-    add
+    ; [&a, &b, p, r, p]
+    copy 4
+    retrieve
     dup
-    jumpz bitwise_xor_end
+    jumpz bitwise_xor_a_zero
+    copy 4
+    retrieve
+    dup
+    jumpz bitwise_xor_b_zero
+    add
     mod 2
     mul
     add
-    ; [a, b] [p, r]
+    ; [&a, &b, p, r]
     swap
     mul 2
 
-    ; update [a,b]
-    push -1
-    call stack_get
+    ; update a
+    copy 3
+    dup
+    retrieve
     div 2
-    push -1
-    swap
-    call stack_set
-    call stack_get_head
+    store
+    ; update b
+    copy 2
+    dup
+    retrieve
     div 2
-    call stack_set_head
+    store
   jump bitwise_xor_loop
-  label bitwise_xor_end
-  ; [a, b] [p, r, p, a+b]
+  label bitwise_xor_a_zero
+  ; [&a, &b, p, r, p, 0]
   pop
+  copy 3
+  retrieve
+  push 0
+  label bitwise_xor_b_zero
+  ; [&a, &b, p, r, p, a, 0]
   pop
-  slide 1
+  mul
+  add
+  slide 3
   push 2
   call stack_discard
 ret
