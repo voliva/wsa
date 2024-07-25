@@ -1,12 +1,13 @@
+include math
 include memory
 
 jump bitwise_lib_end
 
 ; args n, m, mod
-; returns n rotated m positions to the left module mod
+; returns n rotated m positions to the left with "mod" as bitlength
 label bitwise_rotl
   ; calculate top value = 2^mod, consuming mod
-  call __bitwise_exp_2
+  call math_exp_2
 
   swap
   copy 2
@@ -24,22 +25,6 @@ label bitwise_rotl
   label bitwise_rotl_end
   pop
   slide 2
-ret
-
-; args n
-label __bitwise_exp_2
-  push 1
-  swap
-  label __bitwise_exp_2_loop
-    dup
-    jumpz __bitwise_exp_2_loop_end
-    sub 1
-    swap
-    mul 2
-    swap
-    jump __bitwise_exp_2_loop
-  label __bitwise_exp_2_loop_end
-  pop
 ret
 
 ; args n, top
@@ -61,35 +46,51 @@ ret
 ret
 
 ; args a, b
-label bitwise_xor
-  ; we need to modify 3 values, can't do with just the stack
+label bitwise_and
+  ; ensure a is positive if at least one of the two values is positive
+  dup
+  jumpn bitwise_and_neg_end
+  swap
+  label bitwise_and_neg_end
+
+  ; We need to keep updating a,b plus other values, store them in stack
   push 2
   call stack_freeze
   retrieve _STACK_HEAD
   dup
   sub 1
   swap
-  push 0
+  ; [&a, &b]
+
+  ; We have ensured that we either have the situation (a,b) = (+,+) | (+,-) | (-,-)
+  ; +&+ = +, +&- = +, -&- = -
+  ; We can use `a` as our initial result, because that's the one that has the final sign,
+  ; then flip the bit off on the positions where `b` is 0.
+  ; We stop once a=0, b=0 or b=-1
+
+  copy 1
+  retrieve
   push 1
   ; [&a, &b, r, p]
-  label bitwise_xor_loop
+  label bitwise_and_loop
+    ; a%2 == 0 => nothing to flip
+    copy 3
+    retrieve
+    mod 2
+    jumpz bitwise_and_loop_continue
+
+    copy 2
+    retrieve
+    mod 2
+    jumppn bitwise_and_loop_continue
+
+    ; Flip the bit
     swap
     copy 1
-    ; [&a, &b, p, r, p]
-    copy 4
-    retrieve
-    dup
-    jumpz bitwise_xor_a_zero
-    copy 4
-    retrieve
-    dup
-    jumpz bitwise_xor_b_zero
-    add
-    mod 2
-    mul
-    add
-    ; [&a, &b, p, r]
+    sub
     swap
+
+    label bitwise_and_loop_continue
     mul 2
 
     ; update a
@@ -97,99 +98,93 @@ label bitwise_xor
     dup
     retrieve
     div 2
+    dup
+    jumpz bitwise_and_end
+    ; [&a, &b, r, p, &a, a]
     store
+
     ; update b
     copy 2
     dup
     retrieve
     div 2
+    dup
+    jumpz bitwise_and_end
+    dup
+    add 1
+    jumpz bitwise_and_end
+    ; [&a, &b, r, p, &b, b]
     store
-  jump bitwise_xor_loop
-  label bitwise_xor_a_zero
-  ; [&a, &b, p, r, p, 0]
+  jump bitwise_and_loop
+  label bitwise_and_end
+  ; [&a, &b, r, p, &x, x]
   pop
-  copy 3
-  retrieve
-  push 0
-  label bitwise_xor_b_zero
-  ; [&a, &b, p, r, p, a, 0]
   pop
-  mul
-  add
-  slide 3
+  pop
+  slide 2
   push 2
   call stack_discard
 ret
 
 ; args a, b
-label bitwise_and
-  push 2
-  call stack_freeze
-  push 0
-  push 1
-  ; [a, b] [r, p]
-  label bitwise_and_loop
-    swap
-    copy 1
-    ; [a, b] [p, r, p]
-    push -1
-    call stack_get
-    dup
-    jumpz bitwise_and_end
-    mod 2
-    call stack_get_head
-    dup
-    jumpz bitwise_and_end_double
-    mod 2
-    add
-    div 2
-    mul
-    add
-    ; [a, b] [p, r]
-    swap
-    mul 2
-
-    ; update [a,b]
-    push -1
-    call stack_get
-    div 2
-    push -1
-    swap
-    call stack_set
-    call stack_get_head
-    div 2
-    call stack_set_head
-  jump bitwise_and_loop
-  label bitwise_and_end_double
-  pop
-  label bitwise_and_end
-  ; [a, b] [p, r, p, a+1]
-  pop
-  pop
-  slide 1
-  push 2
-  call stack_discard
+label bitwise_xor
+  ; If we have +,- and AND we can easily do it:
+  ; (a+b) - 2*(a&b)
+  ; 1. Add a and b.
+  ; 2. Now we have to subtract 1 from the positions that had carry
+  ; 3. Which are the positions (a&b) but moved one to the side (*2)
+  copy 1
+  copy 1
+  call bitwise_and
+  mul 2
+  copy 2
+  copy 2
+  add
+  swap
+  sub
+  slide 2
 ret
 
-; args n, mod
+; args a, b
+label bitwise_or
+  ; Same concept as bitwise_xor, but we just have to add (a&b) to fill in the positions that overflown to 0.
+  ; (a+b) - 2*(a&b) + (a&b) = (a+b) - (a&b)
+  copy 1
+  copy 1
+  call bitwise_and
+  copy 2
+  copy 2
+  add
+  swap
+  sub
+  slide 2
+ret
+
+; args n
 label bitwise_not
-  call __bitwise_exp_2
-  sub 1
+  add 1
+  push 0
   swap
   sub
 ret
 
-label bitwise_lib_end
+; args n, mod
+label bitwise_not_mod
+  ; We need to do something different if n is negative
+  swap
+  dup
+  jumpn bitwise_not_mod_negative
+  swap
+  call math_exp_2
+  sub 1
+  swap
+  sub
+ret
+  label bitwise_not_mod_negative
+  push -1
+  swap
+  sub
+  slide 1
+ret
 
-; retrieve _STACK_HEAD
-; add 1
-; dup
-; readn
-; retrieve
-; retrieve _STACK_HEAD
-; add 1
-; dup
-; readn
-; retrieve
-; call bitwise_not
-; outn
+label bitwise_lib_end

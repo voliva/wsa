@@ -99,6 +99,9 @@ export function parseWhitespaceProgram(program: string) {
       " \n": "mul",
       "\t ": "div",
       "\t\t": "mod",
+      "\n ": "or",
+      "\n\t": "not",
+      "\n\n": "and",
     };
     const type = opToType[op];
     if (!type) {
