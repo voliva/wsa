@@ -1,5 +1,8 @@
 import lib_io from "./lib/io.wsa?raw";
 import lib_memory from "./lib/memory.wsa?raw";
+import lib_bitwise from "./lib/bitwise.wsa?raw";
+import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw";
+import lib_math from "./lib/math.wsa?raw";
 
 const opcodes = {
   push,
@@ -14,6 +17,9 @@ const opcodes = {
   mul,
   div,
   mod,
+  and,
+  or,
+  not,
   store,
   storestr,
   retrieve,
@@ -152,6 +158,24 @@ function div(value?: string | bigint) {
 function mod(value?: string | bigint) {
   return pushIfDefined(value) + "\t \t\t";
 }
+function and() {
+  if (!debugExtensions) {
+    throw new Error("Can't use `and`: Extensions not enabled");
+  }
+  return `\t \n\n`;
+}
+function or() {
+  if (!debugExtensions) {
+    throw new Error("Can't use `or`: Extensions not enabled");
+  }
+  return `\t \n `;
+}
+function not() {
+  if (!debugExtensions) {
+    throw new Error("Can't use `not`: Extensions not enabled");
+  }
+  return `\t \n\t`;
+}
 
 function store(value?: string | bigint) {
   let result = "";
@@ -190,8 +214,7 @@ function jumpp(label: string) {
   return [push(0n), swap(), sub(), jumpn(label)].join("");
 }
 function jumpnz(jmpLabel: string) {
-  const s1 = getInternalLabel();
-  return [jumpp(s1), jump(jmpLabel), label(s1)].join("");
+  return [sub(1n), jumpn(jmpLabel)].join("");
 }
 function jumppz(jmpLabel: string) {
   const s1 = getInternalLabel();
@@ -210,11 +233,23 @@ async function include(
   if (includedFiles.has(filename)) return "";
   includedFiles.add(filename);
 
+  console.log("include", filename);
   if (filename === "io") {
     return compile(stringToLineStream(lib_io), getIncludedStream);
   }
   if (filename === "memory") {
     return compile(stringToLineStream(lib_memory), getIncludedStream);
+  }
+  if (filename === "bitwise") {
+    return compile(
+      stringToLineStream(
+        debugExtensions ? lib_bitwise_extensions : lib_bitwise
+      ),
+      getIncludedStream
+    );
+  }
+  if (filename === "math") {
+    return compile(stringToLineStream(lib_math), getIncludedStream);
   }
   return compile(getIncludedStream(filename), getIncludedStream);
 }

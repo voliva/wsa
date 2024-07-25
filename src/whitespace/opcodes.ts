@@ -12,7 +12,7 @@ export interface StackOp {
 export interface ArithmeticOp {
   imp: "arithmetic";
   op: {
-    type: "add" | "sub" | "mul" | "div" | "mod";
+    type: "add" | "sub" | "mul" | "div" | "mod" | "or" | "and" | "not";
   };
 }
 export interface HeapOp {

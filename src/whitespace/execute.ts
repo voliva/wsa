@@ -161,23 +161,51 @@ function stepArithmetic(
       `Arithmetic op ${state.pc} failed: needs at least 2 values in the stack`
     );
   }
-  const b = state.stack.pop()!;
-  const a = state.stack.pop()!;
 
-  const result = (() => {
-    switch (instruction.op.type) {
-      case "add":
-        return a + b;
-      case "div":
-        return a / b;
-      case "mod":
-        return a % b;
-      case "mul":
-        return a * b;
-      case "sub":
-        return a - b;
-    }
-  })();
+  const result =
+    instruction.op.type === "not"
+      ? ~state.stack.pop()!
+      : (() => {
+          const b = state.stack.pop()!;
+          const a = state.stack.pop()!;
+
+          switch (instruction.op.type) {
+            case "add":
+              return a + b;
+            case "div": {
+              if (b === 0n) {
+                throw new Error("Division by zero");
+              }
+              const result = a / b;
+              // In the original, the negative result is rounded down (towards more negative)
+              if (((a < 0 && b > 0) || (a > 0 && b < 0)) && a % b !== 0n) {
+                return result - 1n;
+              }
+              return result;
+            }
+            case "mod": {
+              if (b === 0n) {
+                throw new Error("Mod by zero");
+              }
+              const result = a % b;
+
+              // The original implementation with haskell always gives back a number with the same symbol as b.
+              return result < 0 && b > 0
+                ? result + b
+                : result > 0 && b < 0
+                ? result - b
+                : result;
+            }
+            case "mul":
+              return a * b;
+            case "sub":
+              return a - b;
+            case "and":
+              return a & b;
+            case "or":
+              return a | b;
+          }
+        })();
 
   state.stack.push(result);
 

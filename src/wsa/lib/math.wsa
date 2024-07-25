@@ -1,0 +1,19 @@
+jump lib_math_end
+
+; args n
+label math_exp_2
+  push 1
+  swap
+  label math_exp_2_loop
+    dup
+    jumpz math_exp_2_loop_end
+    sub 1
+    swap
+    mul 2
+    swap
+    jump math_exp_2_loop
+  label math_exp_2_loop_end
+  pop
+ret
+
+label lib_math_end

@@ -1,0 +1,89 @@
+include math
+
+jump bitwise_lib_end
+
+; args n, m, mod
+; returns n rotated m positions to the left with "mod" as bitlength
+label bitwise_rotl
+  ; cleanup m so it's mod bitlength
+  swap
+  copy 1
+  mod
+  ; n, mod, m
+
+  ; create mask for the low part
+  copy 1
+  copy 1
+  sub
+  call bitwise_mask
+  copy 3
+  and
+  ; move to high part
+  copy 1
+  call math_exp_2
+  mul
+  ; n, mod, m, r
+
+  ; create mask for the high part
+  swap
+  dup
+  call bitwise_mask
+  copy 4
+  and
+  ; n, mod, r, m, masked
+  ; move to low part
+  swap
+  copy 3
+  swap
+  sub
+  call math_exp_2
+  div
+
+  ; join them together
+  add
+  slide 2
+ret
+
+; args a, b
+label bitwise_xor
+  dup
+  copy 2
+  and
+  not
+  copy 2
+  copy 2
+  or
+  and
+  slide 2
+ret
+
+; args a, b
+label bitwise_and
+  and
+ret
+
+; args a, b
+label bitwise_or
+  or
+ret
+
+; args n
+label bitwise_not
+  not
+ret
+
+; args n, mod
+label bitwise_not_mod
+  call bitwise_mask
+  swap
+  not
+  and
+ret
+
+; args mod
+label bitwise_mask
+  call math_exp_2
+  sub 1
+ret
+
+label bitwise_lib_end
