@@ -169,9 +169,23 @@ function stepArithmetic(
       case "add":
         return a + b;
       case "div":
+        if (b === 0n) {
+          throw new Error("Division by zero");
+        }
         return a / b;
-      case "mod":
-        return a % b;
+      case "mod": {
+        if (b === 0n) {
+          throw new Error("Mod by zero");
+        }
+        const result = a % b;
+
+        // The original implementation with haskell always gives back a number with the same symbol as b.
+        return result < 0 && b > 0
+          ? result + b
+          : result > 0 && b < 0
+          ? result - b
+          : result;
+      }
       case "mul":
         return a * b;
       case "sub":
