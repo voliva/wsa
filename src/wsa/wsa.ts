@@ -326,7 +326,7 @@ export async function compile(
     }
     // eslint-disable-next-line prefer-const
     let [opcode, ...args] = line.split(" ");
-    opcode = opcode.toLocaleLowerCase();
+    opcode = opcode.toLowerCase();
     const mergedArgs = args.join(" ");
 
     try {
