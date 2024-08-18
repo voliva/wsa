@@ -290,7 +290,7 @@ label keccak_round
     call stack_get
     ; [&r, &A, B[24..0]] [RC, {x,y}, B[x+1,y]]
     push 64
-    call bitwise_not
+    call bitwise_not_mod
     copy 1
     add 10
     mod 25
@@ -574,7 +574,7 @@ label fill_input
   dup
   copy 2
   add
-  copy 1
+  push 0
   store
   sub 1
   jump fill_input
