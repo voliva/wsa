@@ -10,6 +10,7 @@
     "start": "vite",
     "build": "tsc -b && vite build",
     "build-gh": "tsc -b && vite build --base /wsa",
+    "build-debug": "tsc -b && vite build --minify false",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "cli": "node dist/cli.js"
