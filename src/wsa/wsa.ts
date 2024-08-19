@@ -399,7 +399,7 @@ function parseArgs(opcode: string, args: Token[]): string {
       }
       throw `expected a string argument, but got ${formatArgTypes(args)}`;
     case "label":
-      if (args.length === 1 && args[0].type === "word") {
+      if (args.length === 1 && (args[0].type === "word" || args[0].type === "variable")) {
         return op.constr(args[0].value);
       }
       throw `expected a label argument, but got ${formatArgTypes(args)}`;
@@ -497,7 +497,7 @@ export async function compile(
       const opcode = tokens[0].value.toLowerCase();
       const args = tokens.slice(1);
       if (opcode == "include") {
-        if (args.length !== 1 || !(args[0].type === "word" || args[0].type === "string")) {
+        if (args.length !== 1 || !(args[0].type === "word" || args[0].type === "string" || args[0].type === "variable")) {
           throw `expected filename argument, but got ${formatArgTypes(args)}`;
         }
         const filename = args[0].value;
