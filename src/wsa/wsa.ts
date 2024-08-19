@@ -27,8 +27,8 @@ const opcodes: { [key: string]: Opcode } = {
   mul: { constr: mul, params: "integer?" },
   div: { constr: div, params: "integer?" },
   mod: { constr: mod, params: "integer?" },
-  and: { constr: and, params: "none" },
-  or: { constr: or, params: "none" },
+  and: { constr: and, params: "integer?" },
+  or: { constr: or, params: "integer?" },
   not: { constr: not, params: "none" },
   store: { constr: store, params: "integer?" },
   storestr: { constr: storestr, params: "string" },
@@ -158,17 +158,17 @@ function div(value?: bigint) {
 function mod(value?: bigint) {
   return pushIfDefined(value) + "\t \t\t";
 }
-function and() {
+function and(value?: bigint) {
   if (!debugExtensions) {
     throw new Error("Can't use `and`: Extensions not enabled");
   }
-  return `\t \n\n`;
+  return pushIfDefined(value) + `\t \n\n`;
 }
-function or() {
+function or(value?: bigint) {
   if (!debugExtensions) {
     throw new Error("Can't use `or`: Extensions not enabled");
   }
-  return `\t \n `;
+  return pushIfDefined(value) + `\t \n `;
 }
 function not() {
   if (!debugExtensions) {
