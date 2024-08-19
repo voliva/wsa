@@ -10,7 +10,7 @@ type Opcode =
   { params: "integer?", constr: (x?: bigint) => string } |
   { params: "index", constr: (x: bigint) => string } |
   { params: "string", constr: (x: string) => string } |
-  { params: "label", constr: (x: string) => string } |
+  { params: "label", constr: (x: number) => string } |
   { params: "variable,integer", constr: (x: string, y: bigint) => string  } |
   { params: "variable,string", constr: (x: string, y: string) => string  };
 
@@ -82,25 +82,29 @@ function numToStr(num: bigint | number) {
     .toString(2)
     .split("")
     .map((v) => (v == "0" ? " " : "\t"))
-    .join("");
+    .join("") + "\n";
 }
-function getTranslatedLabel(label: string) {
+function getTranslatedLabel(labelID: number) {
+  return numToStr(labelID);
+}
+function getLabel(label: string) {
   if (!(label in labelMap)) {
     labelMap[label] = labelIdx++;
     compiledLabels.push(label);
   }
-  return numToStr(labelMap[label]) + "\n";
+  return labelMap[label];
 }
 
 let internalLabel = 0;
 function getInternalLabel() {
-  return `__internal_label_` + internalLabel++;
+  compiledLabels.push(`__internal_label_` + internalLabel++);
+  return labelIdx++;
 }
 
 function number(num: bigint) {
   const sign = num >= 0n ? " " : "\t";
   num = num < 0n ? -num : num;
-  return sign + numToStr(num) + "\n";
+  return sign + numToStr(num);
 }
 
 function push(value: bigint) {
@@ -121,7 +125,7 @@ function copy(value: bigint) {
 function slide(value: bigint) {
   return " \t\n" + number(value);
 }
-function label(label: string) {
+function label(label: number) {
   return `\n  ${getTranslatedLabel(label)}`;
 }
 
@@ -196,29 +200,29 @@ function storestr(value: string) {
 function retrieve(value?: bigint) {
   return pushIfDefined(value) + "\t\t\t";
 }
-function call(label: string) {
+function call(label: number) {
   return `\n \t${getTranslatedLabel(label)}`;
 }
-function jump(label: string) {
+function jump(label: number) {
   return `\n \n${getTranslatedLabel(label)}`;
 }
-function jumpz(label: string) {
+function jumpz(label: number) {
   return `\n\t ${getTranslatedLabel(label)}`;
 }
-function jumpn(label: string) {
+function jumpn(label: number) {
   return `\n\t\t${getTranslatedLabel(label)}`;
 }
-function jumpp(label: string) {
+function jumpp(label: number) {
   return [push(0n), swap(), sub(), jumpn(label)].join("");
 }
-function jumpnz(jmpLabel: string) {
+function jumpnz(jmpLabel: number) {
   return [sub(1n), jumpn(jmpLabel)].join("");
 }
-function jumppz(jmpLabel: string) {
+function jumppz(jmpLabel: number) {
   const s1 = getInternalLabel();
   return [jumpn(s1), jump(jmpLabel), label(s1)].join("");
 }
-function jumppn(jmpLabel: string) {
+function jumppn(jmpLabel: number) {
   const s1 = getInternalLabel();
   return [jumpz(s1), jump(jmpLabel), label(s1)].join("");
 }
@@ -400,7 +404,7 @@ function parseArgs(opcode: string, args: Token[]): string {
       throw `expected a string argument, but got ${formatArgTypes(args)}`;
     case "label":
       if (args.length === 1 && (args[0].type === "word" || args[0].type === "variable")) {
-        return op.constr(args[0].value);
+        return op.constr(getLabel(args[0].value));
       }
       throw `expected a label argument, but got ${formatArgTypes(args)}`;
     case "variable,integer":

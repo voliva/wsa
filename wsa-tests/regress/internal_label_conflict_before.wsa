@@ -1,0 +1,2 @@
+call __internal_label_0
+jumppz x
