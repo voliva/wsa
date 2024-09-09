@@ -1,0 +1,14 @@
+; Parsing for these opcodes used to ignore extra arguments.
+dup 1
+swap 1
+pop 1
+and 1
+or 1
+not 1
+ret 1
+exit 1
+outn 1
+outc 1
+readn 1
+readc 1
+debugger 1
