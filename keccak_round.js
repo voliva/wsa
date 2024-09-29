@@ -1,9 +1,9 @@
 function print(tag, array) {
   const result = [];
   for (let i = 0; i < array.length; i += 2) {
-    result.push(BigInt(array[i]) + (BigInt(array[i + 1]) << 32n));
+    result.push(BigInt(array[i] >>> 0) + (BigInt(array[i + 1] >>> 0) << 32n));
   }
-  console.log(tag, result.join(", "));
+  console.log(tag, result.map((v) => v.toString(16)).join(", "));
 }
 
 function transpose(array) {
@@ -249,7 +249,7 @@ function format64bitArray(arr) {
           for (i = 0; i < blockCount; ++i) {
             s[i] ^= blocks[i];
           }
-          f(s);
+          keccak_f(s);
           this.reset = true;
         } else {
           this.start = i;
@@ -339,7 +339,7 @@ function format64bitArray(arr) {
         s[i] ^= blocks[i];
       }
       console.log("s before shuffle", format64bitArray(transpose(s)));
-      f(s);
+      keccak_f(s);
       console.log("s after shuffle", format64bitArray(transpose(s)));
     }
     hex() {
@@ -369,7 +369,7 @@ function format64bitArray(arr) {
         }
         if (j % blockCount === 0) {
           s = cloneArray(s);
-          f(s);
+          keccak_f(s);
           i = 0;
         }
       }
@@ -413,7 +413,7 @@ function format64bitArray(arr) {
         }
         if (j % blockCount === 0) {
           s = cloneArray(s);
-          f(s);
+          keccak_f(s);
         }
       }
       if (extraBytes) {
@@ -448,7 +448,7 @@ function format64bitArray(arr) {
         }
         if (j % blockCount === 0) {
           s = cloneArray(s);
-          f(s);
+          keccak_f(s);
         }
       }
       if (extraBytes) {
@@ -469,7 +469,7 @@ function format64bitArray(arr) {
     }
   }
 
-  var f = function (s) {
+  var keccak_f = function (s, rounds = 24) {
     var h,
       l,
       n,
@@ -533,7 +533,7 @@ function format64bitArray(arr) {
       b47,
       b48,
       b49;
-    for (n = 0; n < 48; n += 2) {
+    for (n = 0; n < rounds * 2; n += 2) {
       c0 = s[0] ^ s[10] ^ s[20] ^ s[30] ^ s[40];
       c1 = s[1] ^ s[11] ^ s[21] ^ s[31] ^ s[41];
       c2 = s[2] ^ s[12] ^ s[22] ^ s[32] ^ s[42];
@@ -545,8 +545,12 @@ function format64bitArray(arr) {
       c8 = s[8] ^ s[18] ^ s[28] ^ s[38] ^ s[48];
       c9 = s[9] ^ s[19] ^ s[29] ^ s[39] ^ s[49];
 
+      // print("c", [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9]);
+
+      const d = [];
       h = c8 ^ ((c2 << 1) | (c3 >>> 31));
       l = c9 ^ ((c3 << 1) | (c2 >>> 31));
+      d.push(h, l);
       s[0] ^= h;
       s[1] ^= l;
       s[10] ^= h;
@@ -559,6 +563,7 @@ function format64bitArray(arr) {
       s[41] ^= l;
       h = c0 ^ ((c4 << 1) | (c5 >>> 31));
       l = c1 ^ ((c5 << 1) | (c4 >>> 31));
+      d.push(h, l);
       s[2] ^= h;
       s[3] ^= l;
       s[12] ^= h;
@@ -571,6 +576,7 @@ function format64bitArray(arr) {
       s[43] ^= l;
       h = c2 ^ ((c6 << 1) | (c7 >>> 31));
       l = c3 ^ ((c7 << 1) | (c6 >>> 31));
+      d.push(h, l);
       s[4] ^= h;
       s[5] ^= l;
       s[14] ^= h;
@@ -583,6 +589,7 @@ function format64bitArray(arr) {
       s[45] ^= l;
       h = c4 ^ ((c8 << 1) | (c9 >>> 31));
       l = c5 ^ ((c9 << 1) | (c8 >>> 31));
+      d.push(h, l);
       s[6] ^= h;
       s[7] ^= l;
       s[16] ^= h;
@@ -595,6 +602,7 @@ function format64bitArray(arr) {
       s[47] ^= l;
       h = c6 ^ ((c0 << 1) | (c1 >>> 31));
       l = c7 ^ ((c1 << 1) | (c0 >>> 31));
+      d.push(h, l);
       s[8] ^= h;
       s[9] ^= l;
       s[18] ^= h;
@@ -605,6 +613,9 @@ function format64bitArray(arr) {
       s[39] ^= l;
       s[48] ^= h;
       s[49] ^= l;
+
+      // print("delta", d);
+      // print("after delta", transpose(s));
 
       b0 = s[0];
       b1 = s[1];
@@ -656,6 +667,14 @@ function format64bitArray(arr) {
       b27 = (s[39] << 8) | (s[38] >>> 24);
       b8 = (s[48] << 14) | (s[49] >>> 18);
       b9 = (s[49] << 14) | (s[48] >>> 18);
+
+      // /* prettier-ignore */ print("b", [
+      //   b0, b1, b2, b3, b4, b5, b6, b7, b8, b9,
+      //   b10, b11, b12, b13, b14, b15, b16, b17, b18, b19,
+      //   b20, b21, b22, b23, b24, b25, b26, b27, b28, b29,
+      //   b30, b31, b32, b33, b34, b35, b36, b37, b38, b39,
+      //   b40, b41, b42, b43, b44, b45, b46, b47, b48, b49
+      // ]);
 
       s[0] = b0 ^ (~b2 & b4);
       s[1] = b1 ^ (~b3 & b5);
@@ -710,11 +729,16 @@ function format64bitArray(arr) {
 
       s[0] ^= RC[n];
       s[1] ^= RC[n + 1];
+
+      print("rc", [RC[n], RC[n + 1]]);
+      print("round " + (n / 2 + 1), transpose(s));
     }
   };
 
   for (i = 0; i < methodNames.length; ++i) {
     root[methodNames[i]] = methods[methodNames[i]];
   }
-  root["f"] = f;
+  root["keccak_f"] = keccak_f;
 })();
+const s = new Array(50).fill(0);
+keccak_f(s, 3);
