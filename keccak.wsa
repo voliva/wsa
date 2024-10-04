@@ -672,56 +672,77 @@ label keccak_lib_end
 
 call keccak_init
 
-; push 25
-; call malloc
-; push 24
-; label fill_input
-;   dup
-;   jumpn fill_input_end
-;   dup
-;   copy 2
-;   add
-;   push 0
-;   store
-;   sub 1
-;   jump fill_input
-; label fill_input_end
-; pop
+include memory
+include io
 
-; dup
-; push 0xb93eb1a23fb72ea6
-; store
-; ; [&keccak, &A]
-
-; ; copy 1
-; ; retrieve ; RC
-; ; copy 2
-; ; add 24 ; &r
-; ; copy 2 ; &A = what was initialized as a 25[] of 0
-; ; call keccak_round
-
-; ; copy 1
-; ; add 1
-; ; retrieve ; RC
-; ; copy 2
-; ; add 24 ; &r
-; ; copy 2 ; &A = what was initialized as a 25[] of 0
-; ; debugger
-; ; call keccak_round
-
-; copy 1
-; copy 1
-; call keccak_f
-
-push 1
+push 100
 call malloc
 dup
-push 5
-store
-; &keccak, &MBytes
-copy 1
-copy 1
+storestr "Enter your terminating character please"
+dup
+call printsln
 push 1
-; &keccak, &MBytes, &keccak, &MBytes, len
+call stack_reserve
+retrieve _STACK_HEAD
+readc
+dup
+storestr "Enter your phrase please with your terminating character at the end"
+dup
+call printsln
+call mfree
+pop
+
+retrieve _STACK_HEAD
+retrieve
+
+retrieve _STACK_HEAD
+; [&keccak, term, &i]
+label input_phrase
+  dup
+  readc
+  dup
+  retrieve
+  ; [&keccak, term, &i, c]
+  copy 2
+  sub
+  jumpz input_phrase_end
+
+  add 1
+  jump input_phrase
+label input_phrase_end
+slide 1
+retrieve _STACK_HEAD
+sub
+; [&keccak, len]
+dup
+sub 1
+call stack_reserve
+
+dup
+retrieve _STACK_HEAD
+swap
+sub
+add 1
+; &keccak, len, &MBytes
+
+copy 2
+copy 1
+copy 3
+; &keccak, len, &MBytes, &keccak, &MBytes, len
+
 call keccak
-; &keccak, &MBytes, &hash
+; &keccak, len, &MBytes, &hash
+
+push 0
+label output_result
+  dup
+  sub 200
+  jumpz output_result_end
+  copy 1
+  copy 1
+  add
+  retrieve
+  call print_byte_hex
+  add 1
+  jump output_result
+label output_result_end
