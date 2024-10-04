@@ -468,7 +468,59 @@ label keccak_padding
   call stack_restore
 ret
 
+; args &S
+; Returns &hash, which is S[5,5]-64bit serialized into a string [200]-8bit
+label keccak_expand_result
+  push 200
+  call malloc
+  push 24
+  label keccak_expand_i
+    dup
+    jumpn keccak_expand_i_end
+    ; [&S, &hash, i]
+    dup
+    copy 3
+    add
+    retrieve
+    ; [&S, &hash, i, v]
+    copy 2
+    copy 2
+    mul 8
+    add
+    swap
+    ; [&S, &hash, i, &hash[i*8], v]
+    copy 1
+    add 8
+    swap
+    copy 2
+    ; [&S, &hash, i, &hash[i*8], &hash[i*8]+8, v, &a]
+    label keccak_expand_value
+      dup
+      copy 3
+      sub
+      jumpz keccak_expand_value_end
+      dup
+      copy 2
+      mod 256
+      store
+      swap
+      div 256
+      swap
+      add 1
+      jump keccak_expand_value
+    label keccak_expand_value_end
+    slide 3
+    pop
+
+    sub 1
+    jump keccak_expand_i
+  label keccak_expand_i_end
+  pop
+  slide 1
+ret
+
 ; args &keccak, &MBytes, len
+; Returns &hash, a 200-byte array
 label keccak
   call keccak_padding
   ; [&keccak, |P|, &P]
@@ -546,8 +598,61 @@ label keccak
   copy 1
   call mfree
   pop
-  slide 2
+  slide 3
   ; [&keccak, &S]
+
+  ; Transpose S. I have all addressing correct, so the result is correct, but the order in which it has to output is not straightforward.
+  push 4
+  label transpose_x
+  dup
+  jumpn transpose_x_end
+    push 4
+    label transpose_y
+    dup
+    copy 2
+    sub
+    jumpz transpose_y_end
+      ; [&S, x, y]
+      copy 2
+      copy 2
+      mul 5
+      copy 2
+      add
+      add
+      dup
+      retrieve
+      ; [&S, x, y, &a, a]
+      copy 4
+      copy 4
+      copy 4
+      mul 5
+      add
+      add
+      dup
+      retrieve
+      ; [&S, x, y, &a, a, &b, b]
+      swap
+      copy 2
+      store
+      ; [&S, x, y, &a, a, b]
+      swap
+      pop
+      store
+      ; [&S, x, y]
+      sub 1
+    jump transpose_y
+    label transpose_y_end
+    pop
+    sub 1
+  jump transpose_x
+  label transpose_x_end
+  pop
+
+  dup
+  call keccak_expand_result
+  swap
+  call mfree
+  pop
 ret
 
 ; args m, n
@@ -608,11 +713,15 @@ call keccak_init
 ; copy 1
 ; call keccak_f
 
-; &keccak, &MBytes, len
 push 1
 call malloc
 dup
 push 5
 store
+; &keccak, &MBytes
+copy 1
+copy 1
 push 1
+; &keccak, &MBytes, &keccak, &MBytes, len
 call keccak
+; &keccak, &MBytes, &hash
