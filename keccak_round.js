@@ -545,7 +545,7 @@ function format64bitArray(arr) {
       c8 = s[8] ^ s[18] ^ s[28] ^ s[38] ^ s[48];
       c9 = s[9] ^ s[19] ^ s[29] ^ s[39] ^ s[49];
 
-      // print("c", [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9]);
+      print("c", [c0, c1, c2, c3, c4, c5, c6, c7, c8, c9]);
 
       const d = [];
       h = c8 ^ ((c2 << 1) | (c3 >>> 31));
@@ -614,8 +614,8 @@ function format64bitArray(arr) {
       s[48] ^= h;
       s[49] ^= l;
 
-      // print("delta", d);
-      // print("after delta", transpose(s));
+      print("delta", d);
+      print("after delta", transpose(s));
 
       b0 = s[0];
       b1 = s[1];
@@ -668,13 +668,13 @@ function format64bitArray(arr) {
       b8 = (s[48] << 14) | (s[49] >>> 18);
       b9 = (s[49] << 14) | (s[48] >>> 18);
 
-      // /* prettier-ignore */ print("b", [
-      //   b0, b1, b2, b3, b4, b5, b6, b7, b8, b9,
-      //   b10, b11, b12, b13, b14, b15, b16, b17, b18, b19,
-      //   b20, b21, b22, b23, b24, b25, b26, b27, b28, b29,
-      //   b30, b31, b32, b33, b34, b35, b36, b37, b38, b39,
-      //   b40, b41, b42, b43, b44, b45, b46, b47, b48, b49
-      // ]);
+      /* prettier-ignore */ print("b", [
+        b0, b1, b2, b3, b4, b5, b6, b7, b8, b9,
+        b10, b11, b12, b13, b14, b15, b16, b17, b18, b19,
+        b20, b21, b22, b23, b24, b25, b26, b27, b28, b29,
+        b30, b31, b32, b33, b34, b35, b36, b37, b38, b39,
+        b40, b41, b42, b43, b44, b45, b46, b47, b48, b49
+      ]);
 
       s[0] = b0 ^ (~b2 & b4);
       s[1] = b1 ^ (~b3 & b5);
@@ -740,5 +740,13 @@ function format64bitArray(arr) {
   }
   root["keccak_f"] = keccak_f;
 })();
-const s = new Array(50).fill(0);
-keccak_f(s, 3);
+// const s = new Array(50).fill(0);
+// const x = 0;
+// const fila = Math.floor(x / 5);
+// const col = Math.floor(x % 5);
+// const t = col * 5 + fila;
+// s[t * 2] = 0x3fb72ea6;
+// s[t * 2 + 1] = 0xb93eb1a2;
+// print("start", transpose(s));
+
+// keccak_f(s);
