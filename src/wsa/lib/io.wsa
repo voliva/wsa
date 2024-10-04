@@ -23,4 +23,25 @@ push 10
 outC
 ret
 
+label print_byte_hex
+  dup
+  div 16
+  call print_char_hex
+  mod 16
+  call print_char_hex
+ret
+
+; args: n
+label print_char_hex
+  dup
+  sub 10
+  jumppz print_char_hex_a
+  outn
+ret
+  label print_char_hex_a
+  sub 10
+  add 65
+  outc
+ret
+
 label io_lib_end
