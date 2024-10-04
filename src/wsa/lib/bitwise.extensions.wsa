@@ -28,6 +28,13 @@ label bitwise_rotl
   swap
   dup
   call bitwise_mask
+  ; move the mask to the left
+  copy 3
+  copy 2
+  sub
+  call math_exp_2
+  mul
+
   copy 4
   and
   ; n, mod, r, m, masked
