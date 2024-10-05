@@ -1,12 +1,31 @@
+; Keccak-256 implementation in whitespace
+; Copyright (C) 2024 Victor Oliva
+;
+; This program is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+; External references used
+; -- Spec --
+; https://keccak.team/keccak_specs_summary.html
+; SHA3-256: r=1088 c=512, output length = 256, Mbits=01, d=0x06, b=1600, w=64, rounds=24
+;
+; -- Verification --
+; https://emn178.github.io/online-tools/keccak_256.html
+; https://github.com/emn178/js-sha3/blob/master/src/sha3.js
+
 include memory
 include bitwise
 include io
-
-; https://keccak.team/keccak_specs_summary.html
-; SHA3-256: r=1088 c=512, output length = 256, Mbits=01, d=0x06, b=1600, w=64, rounds=24
-; https://emn178.github.io/online-tools/keccak_256.html
-; https://github.com/mjosaarinen/tiny_sha3/blob/master/sha3.c
-; https://github.com/emn178/js-sha3/blob/master/src/sha3.js
 
 jump keccak_lib_end
 
