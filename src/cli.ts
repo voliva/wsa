@@ -54,7 +54,13 @@ program
     await execute(loadProgram(parseWhitespaceProgram(program)), {
       input: callbackInput(() => {
         return new Promise<string>((resolve) =>
-          process.stdin.once("data", (v) => resolve(v.toString()))
+          process.stdin.once("data", (v) => {
+            const value = v.toString();
+            if (value === "\r\n" || value === "\n") {
+              resolve("\n");
+            }
+            resolve(value.replace(/\r?\n$/, ""));
+          })
         );
       }),
       output: callbackOutput((v) => process.stdout.write(v)),

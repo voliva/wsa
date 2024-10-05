@@ -109,8 +109,6 @@ label bitwise_and
     retrieve
     div 2
     dup
-    jumpz bitwise_and_end
-    dup
     add 1
     jumpz bitwise_and_end
     ; [&a, &b, r, p, &b, b]

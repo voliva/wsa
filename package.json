@@ -13,10 +13,11 @@
     "build-debug": "tsc -b && vite build --minify false",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "cli": "node dist/cli.js"
+    "cli": "bun src/cli.ts"
   },
   "dependencies": {
     "@commander-js/extra-typings": "^12.1.0",
+    "bun": "^1.1.29",
     "commander": "^12.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

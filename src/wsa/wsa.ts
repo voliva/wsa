@@ -1,8 +1,8 @@
-import lib_io from "./lib/io.wsa?raw";
-import lib_memory from "./lib/memory.wsa?raw";
-import lib_bitwise from "./lib/bitwise.wsa?raw";
-import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw";
-import lib_math from "./lib/math.wsa?raw";
+import lib_io from "./lib/io.wsa?raw" with { type: "text" };
+import lib_memory from "./lib/memory.wsa?raw" with { type: "text" };
+import lib_bitwise from "./lib/bitwise.wsa?raw" with { type: "text" };
+import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw" with { type: "text" };
+import lib_math from "./lib/math.wsa?raw" with { type: "text" };
 
 type Opcode =
   | { params: "none"; constr: () => string }
@@ -237,7 +237,6 @@ async function include(
   if (includedFiles.has(filename)) return "";
   includedFiles.add(filename);
 
-  console.log("include", filename);
   if (filename === "io") {
     return compile(stringToLineStream(lib_io), getIncludedStream);
   }
@@ -391,7 +390,7 @@ function unescape(stringLiteral: string, quote: string) {
 
 function parseArgs(opcode: string, args: Token[]): string {
   if (!(opcode in opcodes)) {
-    throw "invalid opcode";
+    throw new Error(`invalid opcode ${opcode}`);
   }
   const op = opcodes[opcode];
   let arg;
@@ -525,7 +524,7 @@ export async function compile(
 
   let prevInclude: Promise<string> = Promise.resolve("");
   inputStream((line) => {
-    if (!line) {
+    if (line == null) {
       onEnd();
       return;
     }
