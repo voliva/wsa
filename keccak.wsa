@@ -1,5 +1,6 @@
 include memory
 include bitwise
+include io
 
 ; https://keccak.team/keccak_specs_summary.html
 ; SHA3-256: r=1088 c=512, output length = 256, Mbits=01, d=0x06, b=1600, w=64, rounds=24
@@ -671,9 +672,6 @@ ret
 label keccak_lib_end
 
 call keccak_init
-
-include memory
-include io
 
 push 100
 call malloc
