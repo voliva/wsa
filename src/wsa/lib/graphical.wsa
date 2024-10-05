@@ -1,0 +1,96 @@
+include memory
+include io
+
+reserveaddr _GRAPHICAL_BASE
+valueinteger _GRAPHICAL_W 0
+valueinteger _GRAPHICAL_H 1
+valueinteger _GRAPHICAL_BUF 2 ; takes 3 spaces
+
+jump graphical_lib_end
+
+; args: width, height
+label graphical_init
+  push 5
+  call malloc
+  dup
+  store _GRAPHICAL_BASE
+  ; [w,h,&g]
+  copy 2
+  copy 2
+  mul
+  dup
+  call malloc
+  swap
+  call malloc
+  ; [w,h,&g,&a,&b]
+  copy 2
+  add _GRAPHICAL_BUF
+  add 1
+  swap
+  store
+  ; [w,h,&g,&a]
+  copy 1
+  add _GRAPHICAL_BUF
+  add 2
+  swap
+  store
+  ; [w,h,&g]
+  dup
+  add _GRAPHICAL_BUF
+  push 0
+  store
+  swap
+  copy 1
+  add _GRAPHICAL_H
+  swap
+  store
+  ; [w,&g]
+  swap
+  copy 1
+  add _GRAPHICAL_W
+  swap
+  store
+  ; [&g]
+  retrieve _STACK_HEAD
+  dup
+  storestr "graphical_mode:"
+  call prints
+  outn
+ret
+
+label graphical_clear
+  retrieve _GRAPHICAL_BASE
+  dup
+  add _GRAPHICAL_BUF
+  dup
+  retrieve
+  add
+  add 1
+  retrieve
+  swap
+  ; [&buf,&g]
+  dup
+  add _GRAPHICAL_W
+  retrieve
+  swap
+  add _GRAPHICAL_H
+  retrieve
+  mul
+  ; [&buf,len]
+  push 0
+  swap
+  call memset
+ret
+
+label graphical_switch_buffer
+  retrieve _GRAPHICAL_BASE
+  add _GRAPHICAL_BUF
+  dup
+  retrieve
+  push 1
+  swap
+  sub
+  store
+ret
+
+label graphical_lib_end

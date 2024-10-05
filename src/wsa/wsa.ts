@@ -3,6 +3,7 @@ import lib_memory from "./lib/memory.wsa?raw" with { type: "text" };
 import lib_bitwise from "./lib/bitwise.wsa?raw" with { type: "text" };
 import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw" with { type: "text" };
 import lib_math from "./lib/math.wsa?raw" with { type: "text" };
+import lib_graphical from "./lib/graphical.wsa?raw" with { type: "text" };
 
 type Opcode =
   | { params: "none"; constr: () => string }
@@ -11,6 +12,7 @@ type Opcode =
   | { params: "index"; constr: (x: bigint) => string }
   | { params: "string"; constr: (x: string) => string }
   | { params: "label"; constr: (x: number) => string }
+  | { params: "variable"; constr: (x: string) => string }
   | { params: "variable,integer"; constr: (x: string, y: bigint) => string }
   | { params: "variable,string"; constr: (x: string, y: string) => string };
 
@@ -51,6 +53,7 @@ const opcodes: { [key: string]: Opcode } = {
   valuestring: { constr: valuestring, params: "variable,string" },
   valueinteger: { constr: valueinteger, params: "variable,integer" },
   debugger: { constr: _debugger, params: "none" },
+  reserveaddr: { constr: reserveaddr, params: "variable" }
 };
 
 export type LineStream = (onLine: (line: string | null) => void) => () => void;
@@ -102,6 +105,20 @@ function getInternalLabel() {
   compiledLabels.push(`__internal_label_` + internalLabel++);
   return labelIdx++;
 }
+
+let reservedAddresses = 0;
+const MAX_RESERVED_ADDRESSES = 0x10;
+function reserveaddr(varname: string) {
+  if (reservedAddresses == MAX_RESERVED_ADDRESSES) {
+    throw new Error(
+      "Unable to reserve more addresses than " + MAX_RESERVED_ADDRESSES
+    );
+  }
+  valueinteger(varname, BigInt(reservedAddresses));
+  reservedAddresses++;
+  return "";
+}
+valueinteger("_MAX_RESERVED_ADDRESSES", BigInt(MAX_RESERVED_ADDRESSES));
 
 function number(num: bigint) {
   const sign = num >= 0n ? " " : "\t";
@@ -253,6 +270,9 @@ async function include(
   }
   if (filename === "math") {
     return compile(stringToLineStream(lib_math), getIncludedStream);
+  }
+  if (filename === 'graphical') {
+    return compile(stringToLineStream(lib_graphical), getIncludedStream);
   }
   return compile(getIncludedStream(filename), getIncludedStream);
 }
@@ -463,6 +483,16 @@ function parseArgs(opcode: string, args: Token[]): string {
         (arg = resolveString(args[1])) != undefined
       ) {
         return op.constr(args[0].value, arg);
+      }
+      throw `expected variable and string arguments, but got ${formatArgTypes(
+        args
+      )}`;
+    case 'variable':
+      if (
+        args.length === 1 &&
+        args[0].type === "variable"
+      ) {
+        return op.constr(args[0].value);
       }
       throw `expected variable and string arguments, but got ${formatArgTypes(
         args

@@ -1,0 +1,7 @@
+include graphical
+
+push 160
+push 144
+call graphical_init
+call graphical_clear
+call graphical_switch_buffer
