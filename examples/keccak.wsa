@@ -1,0 +1,765 @@
+; Keccak-256 implementation in whitespace
+; Copyright (C) 2024 Victor Oliva
+;
+; This program is free software: you can redistribute it and/or modify
+; it under the terms of the GNU General Public License as published by
+; the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU General Public License for more details.
+;
+; You should have received a copy of the GNU General Public License
+; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+; External references used
+; -- Spec --
+; https://keccak.team/keccak_specs_summary.html
+; SHA3-256: r=1088 c=512, output length = 256, Mbits=01, d=0x06, b=1600, w=64, rounds=24
+;
+; -- Verification --
+; https://emn178.github.io/online-tools/keccak_256.html
+; https://github.com/emn178/js-sha3/blob/master/src/sha3.js
+
+include memory
+include bitwise
+include io
+
+jump keccak_lib_end
+
+; returns &keccak
+label keccak_init
+  ; [RC[24], r[x=5,y=5]]
+  push 49
+  call malloc
+  ; Fill RC[24]
+  push 0x0000000000000001
+  push 0x0000000000008082
+  push 0x800000000000808A
+  push 0x8000000080008000
+  push 0x000000000000808B
+  push 0x0000000080000001
+  push 0x8000000080008081
+  push 0x8000000000008009
+  push 0x000000000000008A
+  push 0x0000000000000088
+  ; 10
+  push 0x0000000080008009
+  push 0x000000008000000A
+  push 0x000000008000808B
+  push 0x800000000000008B
+  push 0x8000000000008089
+  push 0x8000000000008003
+  push 0x8000000000008002
+  push 0x8000000000000080
+  push 0x000000000000800A
+  push 0x800000008000000A
+  ; 20
+  push 0x8000000080008081
+  push 0x8000000000008080
+  push 0x0000000080000001
+  push 0x8000000080008008
+  copy 24
+  push 24
+  call keccak_store_n
+
+  ; Fill r[x=5,y=5]
+  ; x=0
+  push 0
+  push 36
+  push 3
+  push 41
+  push 18
+  ; x=1
+  push 1
+  push 44
+  push 10
+  push 45
+  push 2
+  ; x=2
+  push 62
+  push 6
+  push 43
+  push 15
+  push 61
+  ; x=3
+  push 28
+  push 55
+  push 25
+  push 21
+  push 56
+  ; x=4
+  push 27
+  push 20
+  push 39
+  push 8
+  push 14
+  copy 25
+  add 24
+  push 25
+  call keccak_store_n
+ret
+
+; args .., addr, n
+label keccak_store_n
+  swap
+  push 1
+  call stack_freeze
+  label keccak_store_n_loop
+    dup
+    jumpz keccak_store_n_end
+    sub 1
+    dup
+    call stack_get_head
+    add
+    copy 2
+    store
+    swap
+    pop
+  jump keccak_store_n_loop
+  label keccak_store_n_end
+  pop
+  push 1
+  call stack_discard
+ret
+
+; args RC, &r, &A
+label keccak_round
+  push 2
+  call stack_freeze
+  push 4
+  ; [&r, &A] [RC, x]
+  label keccak_round_c
+    dup
+    jumpn keccak_round_c_end
+    dup
+    mul 5
+    call stack_get_head
+    add
+    ; [RC, x, &A[x,0]]
+    dup
+    retrieve
+    swap
+    add 1
+    swap
+    ; [RC, x, &A[x,1], A[x,0]]
+    copy 1
+    retrieve
+    call bitwise_xor
+    swap
+    add 1
+    swap
+    ; [RC, x, &A[x,2], C[wip]]
+    copy 1
+    retrieve
+    call bitwise_xor
+    swap
+    add 1
+    swap
+    ; [RC, x, &A[x,3], C[wip]]
+    copy 1
+    retrieve
+    call bitwise_xor
+    swap
+    add 1
+    swap
+    ; [RC, x, &A[x,4], C[wip]]
+    swap
+    retrieve
+    call bitwise_xor
+    ; [RC, x, C[x]]
+    swap
+    sub 1
+  jump keccak_round_c
+  label keccak_round_c_end
+  pop
+  ; [&r, &A] [RC, C[4..0]]
+
+  push 5
+  call stack_freeze
+  push 4
+  ; [&r, &A, C[4..0]] [RC, x]
+  label keccak_round_d
+    dup
+    jumpn keccak_round_d_end
+    dup
+    add 1
+    mod 5
+    push 0
+    swap
+    sub
+    call stack_get
+    push 1
+    push 64
+    call bitwise_rotl
+    push 5
+    copy 2
+    sub 1
+    call __keccak_circle
+    push 0
+    swap
+    sub
+    call stack_get
+    call bitwise_xor
+    swap
+    sub 1
+  jump keccak_round_d
+  label keccak_round_d_end
+  pop
+  ; [&r, &A, C[4..0]] [RC, D[4..0]]
+
+  push 5
+  call stack_discard
+  push 5
+  call stack_freeze
+  push 24
+  ; [&r, &A, D[4..0]] [RC, {x,y}]
+  label keccak_round_theta
+    dup
+    jumpn keccak_round_theta_end
+    dup
+    push -5
+    call stack_get
+    add
+    ; [RC, {x,y}, &A[x,y]]
+    dup
+    retrieve
+    copy 2
+    div 5
+    push 0
+    swap
+    sub
+    call stack_get
+    call bitwise_xor
+    ; [RC, {x,y}, &A[x,y], A[x,y]^D[x]]
+    store
+    sub 1
+  jump keccak_round_theta
+  label keccak_round_theta_end
+  pop
+
+  push 5
+  call stack_discard
+  push 25
+  call stack_reserve
+  push 4
+  ; [&r, &A, B[24..0]] [RC, x]
+  label keccak_round_rp_x
+    dup
+    jumpn keccak_round_rp_x_end
+    push 4
+    ; [&r, &A, B[24..0]] [RC, x, y]
+    label keccak_round_rp_y
+      dup
+      jumpn keccak_round_rp_y_end
+      copy 1
+      mul 5
+      copy 1
+      add
+      ; [&r, &A, B[24..0]] [RC, x, y, {x,y}]
+      dup
+      push -25
+      call stack_get
+      add
+      retrieve
+      swap
+      push -26
+      call stack_get
+      add
+      retrieve
+      push 64
+      call bitwise_rotl
+      ; [&r, &A, B[24..0]] [RC, x, y, B[y,2*x+3*y]]
+      copy 2
+      mul 2
+      copy 2
+      mul 3
+      add
+      mod 5
+      copy 2
+      mul 5
+      add
+      push 0
+      swap
+      sub
+      swap
+      call stack_set
+      ; [&r, &A, B[24..0]] [RC, x, y]
+      sub 1
+    jump keccak_round_rp_y
+    label keccak_round_rp_y_end
+    pop
+    sub 1
+  jump keccak_round_rp_x
+  label keccak_round_rp_x_end
+  pop
+
+  push 24
+  ; [&r, &A, B[24..0]] [RC, {x,y}]
+  label keccak_round_x
+    dup
+    jumpn keccak_round_x_end
+    dup
+    add 5
+    mod 25
+    push 0
+    swap
+    sub
+    call stack_get
+    ; [&r, &A, B[24..0]] [RC, {x,y}, B[x+1,y]]
+    push 64
+    call bitwise_not_mod
+    copy 1
+    add 10
+    mod 25
+    push 0
+    swap
+    sub
+    call stack_get
+    ; [&r, &A, B[24..0]] [RC, {x,y}, ~B[x+1,y], B[x+2,y]]
+    call bitwise_and
+    copy 1
+    push 0
+    swap
+    sub
+    call stack_get
+    call bitwise_xor
+    copy 1
+    push -25
+    call stack_get
+    add
+    swap
+    store
+    sub 1
+    jump keccak_round_x
+  label keccak_round_x_end
+  pop
+  push 25
+  call stack_discard
+
+  ; [&r, &A] [RC]
+  ; iota step
+  call stack_get_head
+  retrieve
+  call bitwise_xor
+  call stack_get_head
+  swap
+  store
+
+  push 2
+  call stack_discard
+ret
+
+; args &keccak, &A
+label keccak_f
+  push 0
+  label keccak_f_loop
+    dup
+    sub 24
+    jumpz keccak_f_loop_end
+    ; [&keccak, &A, i]
+    dup
+    copy 3
+    add
+    retrieve
+    copy 3
+    add 24
+    copy 3
+    call keccak_round
+    add 1
+  jump keccak_f_loop
+  label keccak_f_loop_end
+  slide 2
+  pop
+ret
+
+; args &MBytes, len
+; Returns |P|, &P - Where P[i] is a block of 17 64-bit numbers.
+label keccak_padding
+  ; Padding turns &MBytes into P, which is an array of arrays
+  ; Each P[i] is a block of r/w=17 elements.
+  ; Each P[i][j] is a 64-bit word.
+  ; We first need to convert MBytes into a 64-bit array.
+  ; Adding `d=0x06` just after it finishes
+  ; Then padding it with 0s so that the length is divisible by 17
+  ; Then XOR the last byte with 0x80.
+
+  ; Calculate actual number of blocks
+  dup
+  add 1
+  dup
+  div 8
+  swap
+  mod 8
+  jumpz keccak_padding_calc_blocks_8_zero
+  add 1
+  label keccak_padding_calc_blocks_8_zero
+
+  dup
+  div 17
+  swap
+  mod 17
+  jumpz keccak_padding_calc_blocks_17_zero
+  add 1
+  label keccak_padding_calc_blocks_17_zero
+
+  dup
+  mul 17
+  call malloc
+  ; [&MBytes, len, |P|, &P]
+
+  copy 1
+  mul 17
+  sub 1
+  ; [&MBytes, len, |P|, &P, {i,j}]
+  label keccak_padding_build_p
+    dup
+    jumpn keccak_padding_build_p_end
+    push 0
+    push 7
+    ; [&MBytes, len, |P|, &P, {i,j}, P[i][j], o]
+    label keccak_padding_build_pij
+      dup
+      jumpn keccak_padding_build_pij_end
+      swap
+      mul 0x100
+      ; [&MBytes, len, |P|, &P, {i,j}, o, P[i][j]]
+      copy 1
+      copy 3
+      mul 8
+      add
+      ; If it exceeds len, then it's 0
+      dup
+      copy 7
+      swap
+      sub
+      dup
+      jumpz keccak_padding_build_pij_exact
+      jumpn keccak_padding_build_pij_overflow
+      copy 7
+      add
+      retrieve
+      jump keccak_padding_build_pij_overflow_end
+      label keccak_padding_build_pij_overflow
+      pop
+      push 0
+      jump keccak_padding_build_pij_overflow_end
+      label keccak_padding_build_pij_exact
+      pop
+      pop
+      ; The spec says d=0x06, but every implementation is using 0x01?
+      push 0x01
+      label keccak_padding_build_pij_overflow_end
+      add
+      swap
+      sub 1
+    jump keccak_padding_build_pij
+    label keccak_padding_build_pij_end
+    pop
+    copy 2
+    copy 2
+    add
+    swap
+    store
+    sub 1
+  jump keccak_padding_build_p
+  label keccak_padding_build_p_end
+  pop
+
+  ; [&MBytes, len, |P|, &P]
+  ; XOR the last byte with 0x80, which is actually the left-side one on the last.
+  dup
+  copy 2
+  mul 17
+  sub 1
+  add
+  dup
+  retrieve
+  push 0x8000000000000000
+  call bitwise_xor
+  store
+
+  push 1
+  call stack_freeze
+  slide 2
+  push 1
+  call stack_restore
+ret
+
+; args &S
+; Returns &hash, which is S[5,5]-64bit serialized into a string [200]-8bit
+label keccak_expand_result
+  push 200
+  call malloc
+  push 24
+  label keccak_expand_i
+    dup
+    jumpn keccak_expand_i_end
+    ; [&S, &hash, i]
+    dup
+    copy 3
+    add
+    retrieve
+    ; [&S, &hash, i, v]
+    copy 2
+    copy 2
+    mul 8
+    add
+    swap
+    ; [&S, &hash, i, &hash[i*8], v]
+    copy 1
+    add 8
+    swap
+    copy 2
+    ; [&S, &hash, i, &hash[i*8], &hash[i*8]+8, v, &a]
+    label keccak_expand_value
+      dup
+      copy 3
+      sub
+      jumpz keccak_expand_value_end
+      dup
+      copy 2
+      mod 256
+      store
+      swap
+      div 256
+      swap
+      add 1
+      jump keccak_expand_value
+    label keccak_expand_value_end
+    slide 3
+    pop
+
+    sub 1
+    jump keccak_expand_i
+  label keccak_expand_i_end
+  pop
+  slide 1
+ret
+
+; args &keccak, &MBytes, len
+; Returns &hash, a 200-byte array
+label keccak
+  call keccak_padding
+  ; [&keccak, |P|, &P]
+
+  push 25
+  call malloc
+  dup
+  push 0
+  push 25
+  call memset
+  ; [&keccak, |P|, &P, &S]
+
+  push 0
+  label keccak_absorb
+    dup
+    copy 4
+    sub
+    jumpz keccak_absorb_end
+    dup
+    mul 17
+    copy 3
+    add
+    ; [&keccak, |P|, &P, &S, i, &P[i]]
+    push 0
+    label keccak_absorb_y
+      push 0
+      label keccak_absorb_x
+        ; [&keccak, |P|, &P, &S, i, &P[i], y, x]
+        dup
+        sub 5
+        jumpz keccak_absorb_x_end
+        dup
+        copy 2
+        mul 5
+        add
+        dup
+        sub 17
+        jumpz keccak_absorb_y_end
+        copy 3
+        add
+        retrieve
+        ; [&keccak, |P|, &P, &S, i, &P[i], y, x, P[i][y][x]]
+        copy 2
+        copy 2
+        mul 5
+        add
+        copy 6
+        add
+        ; save the address for later
+        dup
+        retrieve
+        copy 2
+        call bitwise_xor
+        store
+        pop
+        add 1
+        jump keccak_absorb_x
+      label keccak_absorb_x_end
+      pop
+      add 1
+      jump keccak_absorb_y
+    label keccak_absorb_y_end
+    slide 3
+    pop
+    ; [&keccak, |P|, &P, &S, i]
+    copy 4
+    copy 2
+    call keccak_f
+    add 1
+  jump keccak_absorb
+  label keccak_absorb_end
+  pop
+
+  ; free P
+  copy 1
+  call mfree
+  pop
+  slide 3
+  ; [&keccak, &S]
+
+  ; Transpose S. I have all addressing correct, so the result is correct, but the order in which it has to output is not straightforward.
+  push 4
+  label transpose_x
+  dup
+  jumpn transpose_x_end
+    push 4
+    label transpose_y
+    dup
+    copy 2
+    sub
+    jumpz transpose_y_end
+      ; [&S, x, y]
+      copy 2
+      copy 2
+      mul 5
+      copy 2
+      add
+      add
+      dup
+      retrieve
+      ; [&S, x, y, &a, a]
+      copy 4
+      copy 4
+      copy 4
+      mul 5
+      add
+      add
+      dup
+      retrieve
+      ; [&S, x, y, &a, a, &b, b]
+      swap
+      copy 2
+      store
+      ; [&S, x, y, &a, a, b]
+      swap
+      pop
+      store
+      ; [&S, x, y]
+      sub 1
+    jump transpose_y
+    label transpose_y_end
+    pop
+    sub 1
+  jump transpose_x
+  label transpose_x_end
+  pop
+
+  dup
+  call keccak_expand_result
+  swap
+  call mfree
+  pop
+ret
+
+; args m, n
+; returns n % m, with guaranteed positive result
+label __keccak_circle
+  dup
+  jumppz __keccak_circle_positive
+  copy 1
+  add
+  jump __keccak_circle
+  label __keccak_circle_positive
+  swap
+  mod
+ret
+
+label keccak_lib_end
+
+call keccak_init
+
+push 100
+call malloc
+dup
+storestr "Enter your terminating character please"
+dup
+call printsln
+push 1
+call stack_reserve
+retrieve _STACK_HEAD
+readc
+dup
+storestr "Enter your phrase please with your terminating character at the end"
+dup
+call printsln
+call mfree
+pop
+
+retrieve _STACK_HEAD
+retrieve
+
+retrieve _STACK_HEAD
+; [&keccak, term, &i]
+label input_phrase
+  dup
+  readc
+  dup
+  retrieve
+  ; [&keccak, term, &i, c]
+  copy 2
+  sub
+  jumpz input_phrase_end
+
+  add 1
+  jump input_phrase
+label input_phrase_end
+slide 1
+retrieve _STACK_HEAD
+sub
+; [&keccak, len]
+dup
+sub 1
+call stack_reserve
+
+dup
+retrieve _STACK_HEAD
+swap
+sub
+add 1
+; &keccak, len, &MBytes
+
+copy 2
+copy 1
+copy 3
+; &keccak, len, &MBytes, &keccak, &MBytes, len
+
+call keccak
+; &keccak, len, &MBytes, &hash
+
+push 0
+label output_result
+  dup
+  sub 200
+  jumpz output_result_end
+  copy 1
+  copy 1
+  add
+  retrieve
+  call print_byte_hex
+  add 1
+  jump output_result
+label output_result_end
