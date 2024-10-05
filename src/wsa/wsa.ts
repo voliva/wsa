@@ -5,14 +5,14 @@ import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw";
 import lib_math from "./lib/math.wsa?raw";
 
 type Opcode =
-  { params: "none", constr: () => string } |
-  { params: "integer", constr: (x: bigint) => string } |
-  { params: "integer?", constr: (x?: bigint) => string } |
-  { params: "index", constr: (x: bigint) => string } |
-  { params: "string", constr: (x: string) => string } |
-  { params: "label", constr: (x: number) => string } |
-  { params: "variable,integer", constr: (x: string, y: bigint) => string  } |
-  { params: "variable,string", constr: (x: string, y: string) => string  };
+  | { params: "none"; constr: () => string }
+  | { params: "integer"; constr: (x: bigint) => string }
+  | { params: "integer?"; constr: (x?: bigint) => string }
+  | { params: "index"; constr: (x: bigint) => string }
+  | { params: "string"; constr: (x: string) => string }
+  | { params: "label"; constr: (x: number) => string }
+  | { params: "variable,integer"; constr: (x: string, y: bigint) => string }
+  | { params: "variable,string"; constr: (x: string, y: string) => string };
 
 const opcodes: { [key: string]: Opcode } = {
   push: { constr: push, params: "integer" },
@@ -78,11 +78,13 @@ const labelMap: Record<string, number> = {};
 export const compiledLabels: string[] = [];
 let labelIdx = 0;
 function numToStr(num: bigint | number) {
-  return num
-    .toString(2)
-    .split("")
-    .map((v) => (v == "0" ? " " : "\t"))
-    .join("") + "\n";
+  return (
+    num
+      .toString(2)
+      .split("")
+      .map((v) => (v == "0" ? " " : "\t"))
+      .join("") + "\n"
+  );
 }
 function getTranslatedLabel(labelID: number) {
   return numToStr(labelID);
@@ -291,11 +293,11 @@ function _debugger() {
 }
 
 type Token = WordToken | IntegerToken | StringToken | CharToken | VariableToken;
-type WordToken = { type: "word", value: string };
-type IntegerToken = { type: "integer", value: bigint };
-type StringToken = { type: "string", value: string };
-type CharToken = { type: "char", value: bigint };
-type VariableToken = { type: "variable", value: string };
+type WordToken = { type: "word"; value: string };
+type IntegerToken = { type: "integer"; value: bigint };
+type StringToken = { type: "string"; value: string };
+type CharToken = { type: "char"; value: bigint };
+type VariableToken = { type: "variable"; value: string };
 
 function tokenizeLine(line: string): Token[] {
   const tokens = [];
@@ -305,11 +307,11 @@ function tokenizeLine(line: string): Token[] {
     if (!line || line.startsWith(";")) {
       break;
     }
-    if (line.startsWith("\"")) {
+    if (line.startsWith('"')) {
       if (!(match = line.match(/^"((?:[^"\\\n]|\\.)*)"/))) {
         throw "unterminated string";
       }
-      const value = unescape(match[1], "\"").join("");
+      const value = unescape(match[1], '"').join("");
       tokens.push({ type: "string", value } as StringToken);
     } else if (line.startsWith("'")) {
       if (!(match = line.match(/^'((?:[^'\\\n]|\\.)*)'/))) {
@@ -331,7 +333,10 @@ function tokenizeLine(line: string): Token[] {
     } else {
       match = line.match(/^([^\s;"']+)/)!;
       try {
-        tokens.push({ type: "integer", value: BigInt(match[1]) } as IntegerToken);
+        tokens.push({
+          type: "integer",
+          value: BigInt(match[1]),
+        } as IntegerToken);
       } catch (ex) {
         tokens.push({ type: "word", value: match[1] } as WordToken);
       }
@@ -349,14 +354,30 @@ function unescape(stringLiteral: string, quote: string) {
     let char;
     if (chars[i] == "\\") {
       switch (chars[i + 1]) {
-        case quote: case "\\": char = chars[i + 1]; break;
-        case "b": char = "\b"; break;
-        case "f": char = "\f"; break;
-        case "n": char = "\n"; break;
-        case "r": char = "\r"; break;
-        case "t": char = "\t"; break;
-        case "v": char = "\v"; break;
-        default: throw "invalid escape";
+        case quote:
+        case "\\":
+          char = chars[i + 1];
+          break;
+        case "b":
+          char = "\b";
+          break;
+        case "f":
+          char = "\f";
+          break;
+        case "n":
+          char = "\n";
+          break;
+        case "r":
+          char = "\r";
+          break;
+        case "t":
+          char = "\t";
+          break;
+        case "v":
+          char = "\v";
+          break;
+        default:
+          throw "invalid escape";
       }
       i++;
     } else {
@@ -388,10 +409,15 @@ function parseArgs(opcode: string, args: Token[]): string {
     case "integer?":
       if (args.length === 0) {
         return op.constr();
-      } else if (args.length === 1 && (arg = resolveInteger(args[0])) != undefined) {
+      } else if (
+        args.length === 1 &&
+        (arg = resolveInteger(args[0])) != undefined
+      ) {
         return op.constr(arg);
       }
-      throw `expected an optional integer argument, but got ${formatArgTypes(args)}`;
+      throw `expected an optional integer argument, but got ${formatArgTypes(
+        args
+      )}`;
     case "index":
       if (args.length === 1 && (arg = resolveIndex(args[0])) != undefined) {
         return op.constr(arg);
@@ -403,20 +429,35 @@ function parseArgs(opcode: string, args: Token[]): string {
       }
       throw `expected a string argument, but got ${formatArgTypes(args)}`;
     case "label":
-      if (args.length === 1 && (args[0].type === "word" || args[0].type === "variable")) {
+      if (
+        args.length === 1 &&
+        (args[0].type === "word" || args[0].type === "variable")
+      ) {
         return op.constr(getLabel(args[0].value));
       }
       throw `expected a label argument, but got ${formatArgTypes(args)}`;
     case "variable,integer":
-      if (args.length === 2 && args[0].type === "variable" && (arg = resolveInteger(args[1])) != undefined) {
+      if (
+        args.length === 2 &&
+        args[0].type === "variable" &&
+        (arg = resolveInteger(args[1])) != undefined
+      ) {
         return op.constr(args[0].value, arg);
       }
-      throw `expected variable and integer arguments, but got ${formatArgTypes(args)}`;
+      throw `expected variable and integer arguments, but got ${formatArgTypes(
+        args
+      )}`;
     case "variable,string":
-      if (args.length === 2 && args[0].type === "variable" && (arg = resolveString(args[1])) != undefined) {
+      if (
+        args.length === 2 &&
+        args[0].type === "variable" &&
+        (arg = resolveString(args[1])) != undefined
+      ) {
         return op.constr(args[0].value, arg);
       }
-      throw `expected variable and string arguments, but got ${formatArgTypes(args)}`;
+      throw `expected variable and string arguments, but got ${formatArgTypes(
+        args
+      )}`;
   }
 }
 
@@ -460,7 +501,7 @@ function resolveIndex(arg: Token): bigint | undefined {
 }
 
 function formatArgTypes(args: Token[]): string {
-  const types = args.map(arg => arg.type as string);
+  const types = args.map((arg) => arg.type as string);
   if (types.length === 2) {
     return types.join(" and ");
   }
@@ -501,7 +542,14 @@ export async function compile(
       const opcode = tokens[0].value.toLowerCase();
       const args = tokens.slice(1);
       if (opcode == "include") {
-        if (args.length !== 1 || !(args[0].type === "word" || args[0].type === "string" || args[0].type === "variable")) {
+        if (
+          args.length !== 1 ||
+          !(
+            args[0].type === "word" ||
+            args[0].type === "string" ||
+            args[0].type === "variable"
+          )
+        ) {
           throw `expected filename argument, but got ${formatArgTypes(args)}`;
         }
         const filename = args[0].value;
