@@ -1,9 +1,9 @@
-valueinteger _STACK_HEAD 0
+reserveaddr _STACK_HEAD
 valueinteger _HEAP_HEAD 4294967294
 
-push 0
-dup
+push _MAX_RESERVED_ADDRESSES
 store _STACK_HEAD
+push 0
 store _HEAP_HEAD
 
 jump memory_lib_end
@@ -218,6 +218,13 @@ pop
 pop
 pop
 
+ret
+
+; args: data_pointer
+; returns capacity
+label memcapacity
+  sub 1
+  retrieve
 ret
 
 ; args: data_pointer, size

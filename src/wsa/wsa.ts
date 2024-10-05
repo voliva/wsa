@@ -40,6 +40,7 @@ const opcodes = {
   readc,
   valuestring,
   valueinteger,
+  reserveaddr,
   debugger: _debugger,
 };
 
@@ -96,6 +97,20 @@ let internalLabel = 0;
 function getInternalLabel() {
   return `__internal_label_` + internalLabel++;
 }
+
+let reservedAddresses = 0;
+// TODO Configurable through CLI?
+const MAX_RESERVED_ADDRESSES = 0x10;
+function reserveaddr(args: string) {
+  if (reservedAddresses == MAX_RESERVED_ADDRESSES) {
+    throw new Error(
+      "Unable to reserve more addresses than " + MAX_RESERVED_ADDRESSES
+    );
+  }
+  valueinteger(`${args} ${reservedAddresses}`);
+  reservedAddresses++;
+}
+valueinteger(`_MAX_RESERVED_ADDRESSES ${MAX_RESERVED_ADDRESSES}`);
 
 function number(num: bigint) {
   const sign = num >= 0n ? " " : "\t";

@@ -1,0 +1,11 @@
+include memory
+
+jump lib_bintree_end
+
+; returns addr
+label bintree_init
+  push 10
+  call malloc
+ret
+
+label lib_bintree_end
