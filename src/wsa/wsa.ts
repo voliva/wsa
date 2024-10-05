@@ -291,19 +291,29 @@ function _debugger() {
   return debugExtensions ? "\n\n " : "";
 }
 
-type Token = WordToken | IntegerToken | StringToken | CharToken | VariableToken;
+type Token = WordToken | IntegerToken | StringToken | CharToken | VariableToken | DecorationToken;
 type WordToken = { type: "word"; value: string };
 type IntegerToken = { type: "integer"; value: bigint };
 type StringToken = { type: "string"; value: string };
 type CharToken = { type: "char"; value: bigint };
 type VariableToken = { type: "variable"; value: string };
+type DecorationToken = { type: "decoration", value: string };
 
 function tokenizeLine(line: string): Token[] {
-  const tokens = [];
+  const tokens: Token[] = [];
   let match;
   while (line) {
     line = line.replace(/^\s+/, "");
-    if (!line || line.startsWith(";")) {
+    if (!line) {
+      break;
+    }
+    if (line.startsWith(";#;")) {
+      tokens.push({
+        type: 'decoration',
+        value: line.replace(/^;#; ?/, "")
+      })
+      break;
+    } else if (line.startsWith(";")) {
       break;
     }
     if (line.startsWith('"')) {
@@ -523,6 +533,7 @@ export async function compile(
   });
 
   let prevInclude: Promise<string> = Promise.resolve("");
+  const decorationLines: string[] = [];
   inputStream((line) => {
     if (line == null) {
       onEnd();
@@ -533,6 +544,10 @@ export async function compile(
     try {
       const tokens = tokenizeLine(line);
       if (tokens.length === 0) {
+        return;
+      }
+      if (tokens[0].type === 'decoration') {
+        decorationLines.push(tokens[0].value);
         return;
       }
       if (tokens[0].type !== "word") {
@@ -570,7 +585,23 @@ export async function compile(
 
   await ended;
   const r = await Promise.all(results);
-  return r.join("");
+  const joined = r.join("");
+
+  if (decorationLines.length) {
+    const split = joined.split("\n");
+
+    decorationLines.forEach((d, i) => {
+      if (split.length <= i) return;
+      split[i] = d
+        .replaceAll("\t", "  ")
+        .replaceAll(" ", "\u00A0")
+        .replaceAll("\n", "") + split[i];
+    })
+
+    return split.join("\n");
+  }
+
+  return joined;
 }
 
 export async function compileAndExit(
