@@ -100,12 +100,12 @@ It's based on [Burghard's WSA](https://github.com/wspace/burghard-wsa) as assemb
 
 While on debug mode, this interpreter adds some language extensions to debug or increase performance. For this, a few more operations are added, both to the assembler and the whitespace code ops:
 
-- `debugger`: "LLS" Signals the interpreter to pause execution at that point.
+- `dbg`: "LLS" Signals the interpreter to pause execution at that point.
 - `and`: "TSLL" Performs the bitwise and operation of the top 2 values of the stack.
 - `or`: "TSLS" Performs the bitwise or operation of the top 2 values of the stack.
 - `not`: "TSLT" Performs the bitwise not operation to the top value of the stack.
 
-As these are not whitespace standard, the assembler will omit the `debugger` instruction if the extension is not enabled, and throw an Error for the bitwise operations.
+As these are not whitespace standard, the assembler will omit the `dbg` instruction if the extension is not enabled, and throw an Error for the bitwise operations.
 
 ## STD lib
 

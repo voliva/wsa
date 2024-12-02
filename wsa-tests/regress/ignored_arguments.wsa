@@ -11,4 +11,4 @@ outn 1
 outc 1
 readn 1
 readc 1
-debugger 1
+dbg 1

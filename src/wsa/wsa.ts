@@ -50,7 +50,7 @@ const opcodes: { [key: string]: Opcode } = {
   readc: { constr: readc, params: "none" },
   valuestring: { constr: valuestring, params: "variable,string" },
   valueinteger: { constr: valueinteger, params: "variable,integer" },
-  debugger: { constr: _debugger, params: "none" },
+  dbg: { constr: dbg, params: "none" },
 };
 
 export type LineStream = (onLine: (line: string | null) => void) => () => void;
@@ -287,7 +287,7 @@ let debugExtensions = false;
 export function enableDebugExtensions() {
   debugExtensions = true;
 }
-function _debugger() {
+function dbg() {
   return debugExtensions ? "\n\n " : "";
 }
 
