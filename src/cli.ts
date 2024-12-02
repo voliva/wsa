@@ -1,5 +1,5 @@
 import { Command } from "@commander-js/extra-typings";
-import { LineStream, compileAndExit, enableDebugExtensions } from "./wsa/wsa";
+import { LineStream, compileAndExit, enableExtensions } from "./wsa/wsa";
 import readline from "readline";
 import fs from "node:fs";
 import { writeFile, readFile } from "node:fs/promises";
@@ -16,10 +16,10 @@ program
   .description("Compile assembly file into whitespace")
   .argument("<main>", "entry point file to compile")
   .argument("<output>", "output file to store the result")
-  .option("--debugger", "include debugger symbols")
+  .option("--extensions", "use extension instructions")
   .action(async (main, output, options) => {
-    if (options.debugger) {
-      enableDebugExtensions();
+    if (options.extensions) {
+      enableExtensions();
     }
 
     const result = await compileAndExit(

@@ -4,7 +4,8 @@ dup
 outn
 add 1
 dup
-test 10
+push 10
+sub
 jumpz end
 push ' '
 outc

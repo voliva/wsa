@@ -59,36 +59,41 @@ export function parseWhitespaceProgram(program: string) {
       ];
     }
 
-    const nextChar = c(idx + 1);
+    const op = program.slice(idx, idx + 2);
+    const opToType: Record<string, Exclude<StackOp["op"]["type"], "push">> = {
+      "\t ": "copy",
+      "\t\n": "slide",
+      "\n ": "dup",
+      "\n\t": "swap",
+      "\n\n": "pop",
+    };
+    const type = opToType[op];
+    if (!type) {
+      throw new Error("Error while reading stack op. Opcode: " + readable(op));
+    }
 
-    if (c(idx) == "\n") {
+    if (type === "copy" || type === "slide") {
+      const [result, i] = readNumber(idx + 2);
       return [
         {
           imp: "stack",
           op: {
-            type: nextChar == " " ? "dup" : nextChar === "\t" ? "swap" : "pop",
+            type,
+            value: result,
           },
         },
-        idx + 2,
+        i,
       ];
     }
 
-    if (nextChar === "\t") {
-      throw new Error(
-        "Error while reading stack op. Expected space or linefeed, get tab"
-      );
-    }
-
-    const [result, i] = readNumber(idx + 2);
     return [
       {
         imp: "stack",
         op: {
-          type: nextChar == " " ? "copy" : "slide",
-          value: result,
+          type,
         },
       },
-      i,
+      idx + 2,
     ];
   }
   function readArithmetic(idx: number): [ArithmeticOp, number] {
@@ -137,46 +142,36 @@ export function parseWhitespaceProgram(program: string) {
     ];
   }
   function readFlow(idx: number): [FlowOp, number] {
-    const first = c(idx);
-    const second = c(idx + 1);
-    if (first === "\t" && second === "\n") {
-      return [
-        {
-          imp: "flow",
-          op: {
-            type: "ret",
-          },
-        },
-        idx + 2,
-      ];
-    }
-    if (first === "\n") {
-      return [
-        {
-          imp: "flow",
-          op: {
-            type: second === "\n" ? "exit" : "dbg",
-          },
-        },
-        idx + 2,
-      ];
-    }
-
     const op = program.slice(idx, idx + 2);
-    const opToType: Record<string, "mark" | "call" | "jmp" | "jmpz" | "jmpn"> =
+    const opToType: Record<string, FlowOp["op"]["type"]> =
       {
         "  ": "mark",
         " \t": "call",
         " \n": "jmp",
         "\t ": "jmpz",
         "\t\t": "jmpn",
+        "\t\n": "ret",
+        "\n ": "dbg",
+        "\n\n": "exit",
       };
     const type = opToType[op];
     if (!type) {
       throw new Error("Error while reading flow op. Opcode: " + readable(op));
     }
-    const [result, i] = readLabel(idx + 2);
 
+    if (type === "ret" || type === "dbg" || type === "exit") {
+      return [
+        {
+          imp: "flow",
+          op: {
+            type,
+          },
+        },
+        idx + 2,
+      ];
+    }
+
+    const [result, i] = readLabel(idx + 2);
     return [
       {
         imp: "flow",
