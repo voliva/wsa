@@ -165,19 +165,19 @@ function mod(value?: bigint) {
   return pushIfDefined(value) + "\t \t\t";
 }
 function and(value?: bigint) {
-  if (!debugExtensions) {
+  if (!extensions) {
     throw new Error("Can't use `and`: Extensions not enabled");
   }
   return pushIfDefined(value) + `\t \n\n`;
 }
 function or(value?: bigint) {
-  if (!debugExtensions) {
+  if (!extensions) {
     throw new Error("Can't use `or`: Extensions not enabled");
   }
   return pushIfDefined(value) + `\t \n `;
 }
 function not() {
-  if (!debugExtensions) {
+  if (!extensions) {
     throw new Error("Can't use `not`: Extensions not enabled");
   }
   return `\t \n\t`;
@@ -246,7 +246,7 @@ async function include(
   if (filename === "bitwise") {
     return compile(
       stringToLineStream(
-        debugExtensions ? lib_bitwise_extensions : lib_bitwise
+        extensions ? lib_bitwise_extensions : lib_bitwise
       ),
       getIncludedStream
     );
@@ -283,12 +283,12 @@ function valueinteger(name: string, value: bigint) {
   return "";
 }
 
-let debugExtensions = false;
-export function enableDebugExtensions() {
-  debugExtensions = true;
+let extensions = false;
+export function enableExtensions() {
+  extensions = true;
 }
 function dbg() {
-  return debugExtensions ? "\n\n " : "";
+  return extensions ? "\n\n " : "";
 }
 
 type Token = WordToken | IntegerToken | StringToken | CharToken | VariableToken | DecorationToken;

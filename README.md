@@ -105,7 +105,7 @@ While on debug mode, this interpreter adds some language extensions to debug or 
 - `or`: "TSLS" Performs the bitwise or operation of the top 2 values of the stack.
 - `not`: "TSLT" Performs the bitwise not operation to the top value of the stack.
 
-As these are not whitespace standard, the assembler will omit the `dbg` instruction if the extension is not enabled, and throw an Error for the bitwise operations.
+As these are not whitespace standard, if the `--extensions` option is not enabled, the assembler will omit the `dbg` instruction and throw an Error for the bitwise operations.
 
 ## STD lib
 

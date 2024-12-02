@@ -3,7 +3,7 @@ import { Button } from "../lib";
 import { WhitespaceOp, parseWhitespaceProgram } from "../whitespace";
 import {
   compileAndExit,
-  enableDebugExtensions,
+  enableExtensions,
   stringToLineStream,
 } from "../wsa/wsa";
 
@@ -14,7 +14,7 @@ export const ProgramLoader: FC<{
 
   const loadASM = async () => {
     const stringValue = ref.current!.value;
-    enableDebugExtensions();
+    enableExtensions();
 
     if (stringValue.includes("[LF]")) {
       onSubmit(
