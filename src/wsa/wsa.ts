@@ -193,9 +193,8 @@ function store(value?: bigint) {
 }
 function storestr(value: string) {
   return (
-    (value + "\0")
-      .split("")
-      .map((v) => dup() + push(BigInt(v.charCodeAt(0))) + store() + add(1n))
+    [...value + "\0"]
+      .map((v) => dup() + push(BigInt(v.codePointAt(0)!)) + store() + add(1n))
       .join("") + pop()
   );
 }
