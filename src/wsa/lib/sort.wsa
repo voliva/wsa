@@ -1,3 +1,19 @@
+;#; Quicksort implementation in whitespace
+;#; Copyright (C) 2024 Victor Oliva
+;#;
+;#; This program is free software: you can redistribute it and/or modify
+;#; it under the terms of the GNU General Public License as published by
+;#; the Free Software Foundation, either version 3 of the License, or
+;#; any later version.
+;#;
+;#; This program is distributed in the hope that it will be useful,
+;#; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;#; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;#; GNU General Public License for more details.
+;#;
+;#; You should have received a copy of the GNU General Public License
+;#; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 include memory_stack
 include io
 
@@ -111,7 +127,6 @@ label quick_sort
     copy 1
     call _qs_swap
     ; [&V, len, &pivot, &left, &right]
-    sub 1
     swap
     add 1
     swap
@@ -233,10 +248,37 @@ ret
 label sort_lib_end
 
 
-push 30
+push 10
 dup
-storestr "This is a test to check whether quicksort works"
-push 47
+
+storestr "Enter the characters to sort alphabetically, end with Enter"
+dup
+call printsln
+dup
+; [&start, &i]
+
+label input_phrase
+  dup
+  readc
+  dup
+  retrieve
+  ; [&start, &i, c]
+  push 10
+  sub
+  jumpz input_phrase_end
+
+  add 1
+  jump input_phrase
+label input_phrase_end
+
+dup
+push 0
+store
+
+copy 1
+sub
+; [&start, len]
+copy 1
+swap
 call quick_sort
-push 30
 call prints
