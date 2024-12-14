@@ -25,11 +25,11 @@ label quick_sort
     retrieve
     call _qs_sort_two
     ; [&V[0], &V[1], a, b]
-    copy 3
+    copy 2
     swap
     store
+    slide 1
     store
-    pop
     ret
   label _qs_lg_2
   ; [&V len]
@@ -91,6 +91,10 @@ label quick_sort
     ; [&V, len, &pivot, &left, pivot, &right]
     label _qs_move_right
       dup
+      copy 3
+      sub
+      jumpnz _qs_end_r
+      dup
       retrieve
       copy 2
       ; [&V, len, &pivot, &left, pivot, &right, right, pivot]
@@ -112,6 +116,12 @@ label quick_sort
     add 1
     swap
   jump _qs_round
+  label _qs_end_r
+  ; [&V, len, &pivot, &left, pivot, &right]
+  slide 1
+  swap
+  push 0
+  swap
   label _qs_end
   ; [&V, len, &pivot, &right, pivot, &left]
   ; swap pivot with &left, then perform the recursive call
@@ -129,7 +139,7 @@ label quick_sort
   copy 2
   copy 2
   sub
-  sub 2
+  sub 1
   ; [&V, len, left_len, &right, right_len]
   call quick_sort
   ; [&V, len, left_len]
@@ -224,8 +234,8 @@ label sort_lib_end
 
 
 push 30
+dup
 storestr "This is a test to check whether quicksort works"
-push 30
 push 47
 call quick_sort
 push 30
