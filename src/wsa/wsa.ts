@@ -1,4 +1,5 @@
 import lib_io from "./lib/io.wsa?raw" with { type: "text" };
+import lib_memory_stack from "./lib/memory_stack.wsa?raw" with { type: "text" };
 import lib_memory from "./lib/memory.wsa?raw" with { type: "text" };
 import lib_bitwise from "./lib/bitwise.wsa?raw" with { type: "text" };
 import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw" with { type: "text" };
@@ -242,6 +243,9 @@ async function include(
   if (filename === "memory") {
     return compile(stringToLineStream(lib_memory), getIncludedStream);
   }
+  if (filename === "memory_stack") {
+    return compile(stringToLineStream(lib_memory_stack), getIncludedStream);
+  }
   if (filename === "bitwise") {
     return compile(
       stringToLineStream(
@@ -430,6 +434,7 @@ function parseArgs(opcode: string, args: Token[]): string {
       if (args.length === 1 && (arg = resolveIndex(args[0])) != undefined) {
         return op.constr(arg);
       }
+      console.log(op);
       throw `expected an index argument, but got ${formatArgTypes(args)}`;
     case "string":
       if (args.length === 1 && (arg = resolveString(args[0])) != undefined) {

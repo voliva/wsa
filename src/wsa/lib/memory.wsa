@@ -1,9 +1,7 @@
-valueinteger _STACK_HEAD 0
-valueinteger _HEAP_HEAD 4294967294
+include memory_stack
 
+valueinteger _HEAP_HEAD 4294967294
 push 0
-dup
-store _STACK_HEAD
 store _HEAP_HEAD
 
 jump memory_lib_end
@@ -292,106 +290,6 @@ label memory_found
 ; set prev.next to data_pointer.next
 swap
 pop
-ret
-
-; args: length
-label stack_freeze
-dup
-retrieve _STACK_HEAD
-add
-dup
-store _STACK_HEAD
-swap
-; [a,b,c,d,H,L]
-label stack_freeze_loop
-dup
-jumpz stack_freeze_end
-sub 1
-; I can't slide keeping 2 values, which are important on the loop
-; I will store that into +1, because we already updated the _STACK_HEAD it should be alright
-push 1
-swap
-call stack_set
-dup
-copy 2
-store
-slide 1
-sub 1
-push 1
-call stack_get
-jump stack_freeze_loop
-label stack_freeze_end
-pop
-pop
-ret
-
-; args: length
-label stack_reserve
-retrieve _STACK_HEAD
-add
-store _STACK_HEAD
-ret
-
-; args: length
-label stack_restore
-; store length on +1
-dup
-push 1
-swap
-call stack_set
-sub 1
-label stack_restore_loop
-dup
-retrieve _STACK_HEAD
-swap
-sub
-retrieve
-swap
-sub 1
-dup
-jumppz stack_restore_loop
-pop
-retrieve _STACK_HEAD
-dup
-add 1
-retrieve
-sub
-store _STACK_HEAD
-ret
-
-; args: length
-label stack_discard
-retrieve _STACK_HEAD
-swap
-sub
-store _STACK_HEAD
-ret
-
-; args: offset
-label stack_get
-retrieve _STACK_HEAD
-add
-retrieve
-ret
-
-; args: offset value
-label stack_set
-swap
-retrieve _STACK_HEAD
-add
-swap
-store
-ret
-
-label stack_get_head
-retrieve _STACK_HEAD
-retrieve
-ret
-
-label stack_set_head
-retrieve _STACK_HEAD
-swap
-store
 ret
 
 label memory_lib_end
