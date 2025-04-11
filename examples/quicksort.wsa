@@ -1,0 +1,395 @@
+;#; Quicksort implementation in whitespace
+;#; Copyright (C) 2024 Victor Oliva
+;#;
+;#; This program is free software: you can redistribute it and/or modify
+;#; it under the terms of the GNU General Public License as published by
+;#; the Free Software Foundation, either version 3 of the License, or
+;#; any later version.
+;#;
+;#; This program is distributed in the hope that it will be useful,
+;#; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;#; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;#; GNU General Public License for more details.
+;#;
+;#; You should have received a copy of the GNU General Public License
+;#; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+include memory_stack
+include io
+
+jump sort_lib_end
+
+; args &V len
+label quick_sort
+  ; check for cases len = 0..3
+  dup
+  sub 1
+  jumpp _qs_lg_1
+    pop
+    pop
+    ret
+  label _qs_lg_1
+  dup
+  sub 2
+  jumpp _qs_lg_2
+    pop
+    dup
+    add 1
+    copy 1
+    retrieve
+    copy 1
+    retrieve
+    call _qs_sort_two
+    ; [&V[0], &V[1], a, b]
+    copy 2
+    swap
+    store
+    slide 1
+    store
+    ret
+  label _qs_lg_2
+  ; [&V len]
+  dup
+  sub 3
+  jumpp _qs_lg_3
+    pop
+    dup
+    add 1
+    dup
+    add 1
+    call _qs_sort_3_addr
+    ret
+  label _qs_lg_3
+  copy 1
+  copy 1
+  call _qs_move_pivot
+  copy 1
+  copy 1
+  sub 1
+  add
+  copy 2
+  ; [&V, len, &pivot, &left]
+  copy 1
+  sub 1
+  ; [&V, len, &pivot, &left, &right]
+  label _qs_round
+    ; move left to first bigger than the pivot
+    swap
+    copy 2
+    retrieve
+    swap
+    ; [&V, len, &pivot, &right, pivot, &left]
+    label _qs_move_left
+      dup
+      copy 3
+      swap
+      sub
+      jumpnz _qs_end
+      dup
+      retrieve
+      copy 2
+      ; [&V, len, &pivot, &right, pivot, &left, left, pivot]
+      swap
+      sub
+      ;TODO maybe jumpn?
+      jumpnz _qs_move_left_end
+      add 1
+      jump _qs_move_left
+    label _qs_move_left_end
+    ; [&V, len, &pivot, &right, pivot, &left]
+    slide 1
+    swap
+    ; [&V, len, &pivot, &left, &right]
+    ; move right to first smaller than the pivot
+    copy 2
+    retrieve
+    swap
+    ; [&V, len, &pivot, &left, pivot, &right]
+    label _qs_move_right
+      dup
+      copy 3
+      sub
+      jumpnz _qs_end_r
+      dup
+      retrieve
+      copy 2
+      ; [&V, len, &pivot, &left, pivot, &right, right, pivot]
+      sub
+      ;TODO maybe jumpn?
+      jumpnz _qs_move_right_end
+      sub 1
+      jump _qs_move_right
+    label _qs_move_right_end
+    ; [&V, len, &pivot, &left, pivot, &right]
+    ; swap right and left, continue next round
+    slide 1
+    copy 1
+    copy 1
+    call _qs_swap
+    ; [&V, len, &pivot, &left, &right]
+    swap
+    add 1
+    swap
+  jump _qs_round
+  label _qs_end_r
+  ; [&V, len, &pivot, &left, pivot, &right]
+  slide 1
+  swap
+  push 0
+  swap
+  label _qs_end
+  ; [&V, len, &pivot, &right, pivot, &left]
+  ; swap pivot with &left, then perform the recursive call
+  slide 2
+  swap
+  copy 1
+  call _qs_swap
+  ; [&V, len, &center]
+  dup
+  copy 3
+  sub
+  ; [&V, len, &center, left_len]
+  swap
+  add 1
+  copy 2
+  copy 2
+  sub
+  sub 1
+  ; [&V, len, left_len, &right, right_len]
+  call quick_sort
+  ; [&V, len, left_len]
+  slide 1
+  call quick_sort
+ret
+
+; args &V &M len
+label quick_sort_mirrored
+  ; multiply every &V element by len and add index
+  push 0
+  ; [&V, &M, len, i]
+  label _quick_sort_mirrored_add_idx
+    dup
+    copy 2
+    sub
+    jumpz _quick_sort_mirrored_add_idx_end
+    dup
+    copy 4
+    add
+    dup
+    retrieve
+    ; [&V, &M, len, i, &V[i], V[i]]
+    copy 3
+    mul
+    copy 2
+    add
+    store
+    add 1
+    jump _quick_sort_mirrored_add_idx
+  label _quick_sort_mirrored_add_idx_end
+
+  ; [&V, &M, len, len]
+  copy 3
+  swap
+  call quick_sort
+
+  ; [&V, &M, len]
+  push 0
+  label _quick_sort_mirrored_fetch
+    dup
+    copy 2
+    sub
+    jumpz _quick_sort_mirrored_fetch_end
+    dup
+    copy 4
+    add
+    dup
+    retrieve
+    ; [&V, &M, len, i, &V[i], V[i]]
+    ; grab the index and load it
+    dup
+    copy 4
+    mod
+    ; [&V, &M, len, i, &V[i], V[i], idx]
+    copy 5
+    add
+    retrieve
+    ; [&V, &M, len, i, &V[i], V[i], M[idx]]
+    copy 3
+    retrieve _STACK_HEAD
+    add 1
+    add
+    swap
+    store
+    ; [&V, &M, len, i, &V[i], V[i]]
+    copy 3
+    div
+    store
+    add 1
+    jump _quick_sort_mirrored_fetch
+  label _quick_sort_mirrored_fetch_end
+  ; [&V, &M, len, len]
+
+  pop
+  ; [&V, &M, i]
+  label _quick_sort_mirrored_mirror
+    dup
+    jumpz _quick_sort_mirrored_mirror_end
+    sub 1
+    dup
+    copy 2
+    add
+    ; [&V, &M, i, &M[i]]
+    copy 1
+    retrieve _STACK_HEAD
+    add 1
+    add
+    retrieve
+    store
+    jump _quick_sort_mirrored_mirror
+  label _quick_sort_mirrored_mirror_end
+
+  pop
+  pop
+  pop
+ret
+
+; args &V len
+; assumes len > 3
+label _qs_move_pivot
+  dup
+  sub 1
+  ; [&V, len, len-1]
+  copy 2
+  add
+  swap
+  ; [&V, &V[-1], len]
+  div 2
+  copy 2
+  add
+  ; [&V, &V[-1], &V[1/2]]
+  call _qs_sort_3_addr
+ret
+
+; args &A &B &C
+; sorts them into order
+label _qs_sort_3_addr
+  copy 2
+  retrieve
+  copy 2
+  retrieve
+  copy 2
+  retrieve
+  ; [&A, &B, &C, a, b, c]
+  call _qs_sort_three
+  ; [&A, &B, &C, a, b, c]
+  copy 3
+  swap
+  store
+  ; [&A, &B, &C, a, b]
+  copy 3
+  swap
+  store
+  ; [&A, &B, &C, a]
+  copy 3
+  swap
+  store
+  slide 2
+  pop
+ret
+
+; args a b
+; returns [a,b] sorted ascending (top element of stack is largest)
+label _qs_sort_two
+  copy 1
+  copy 1
+  sub
+  jumpn _qs_sort_two_done
+  swap
+  label _qs_sort_two_done
+ret
+
+; args a b c
+; returns [a,b,c] sorted (top element of stack is largest)
+label _qs_sort_three
+  push 1
+  call stack_reserve
+  call stack_set_head
+  call _qs_sort_two
+  call stack_get_head
+  call _qs_sort_two
+  call stack_set_head
+  call _qs_sort_two
+  call stack_get_head
+  push 1
+  call stack_discard
+ret
+
+; args &A &B
+label _qs_swap
+  dup
+  retrieve
+  swap
+  ; [&A, B, &B]
+  copy 2
+  retrieve
+  store
+  store
+ret
+
+label sort_lib_end
+
+; retrieve _STACK_HEAD
+; add 1
+; push 3
+; push 2
+; push 1
+; push 3
+; call stack_freeze
+
+; retrieve _STACK_HEAD
+; add 1
+; push 10
+; push 5
+; push 2
+; push 3
+; call stack_freeze
+
+; push 3
+; call quick_sort_mirrored
+
+; exit
+
+push 10
+dup
+
+storestr "Enter the characters to sort alphabetically, end with Enter"
+dup
+call printsln
+dup
+; [&start, &i]
+
+label input_phrase
+  dup
+  readc
+  dup
+  retrieve
+  ; [&start, &i, c]
+  push 10
+  sub
+  jumpz input_phrase_end
+
+  add 1
+  jump input_phrase
+label input_phrase_end
+
+dup
+push 0
+store
+
+copy 1
+sub
+; [&start, len]
+copy 1
+swap
+call quick_sort
+call prints
