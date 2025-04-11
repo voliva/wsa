@@ -161,7 +161,98 @@ label quick_sort
   slide 1
   call quick_sort
 ret
-  
+
+; args &V &M len
+label quick_sort_mirrored
+  ; multiply every &V element by len and add index
+  push 0
+  ; [&V, &M, len, i]
+  label _quick_sort_mirrored_add_idx
+    dup
+    copy 2
+    sub
+    jumpz _quick_sort_mirrored_add_idx_end
+    dup
+    copy 4
+    add
+    dup
+    retrieve
+    ; [&V, &M, len, i, &V[i], V[i]]
+    copy 3
+    mul
+    copy 2
+    add
+    store
+    add 1
+    jump _quick_sort_mirrored_add_idx
+  label _quick_sort_mirrored_add_idx_end
+
+  ; [&V, &M, len, len]
+  copy 3
+  swap
+  call quick_sort
+
+  ; [&V, &M, len]
+  push 0
+  label _quick_sort_mirrored_fetch
+    dup
+    copy 2
+    sub
+    jumpz _quick_sort_mirrored_fetch_end
+    dup
+    copy 4
+    add
+    dup
+    retrieve
+    ; [&V, &M, len, i, &V[i], V[i]]
+    ; grab the index and load it
+    dup
+    copy 4
+    mod
+    ; [&V, &M, len, i, &V[i], V[i], idx]
+    copy 5
+    add
+    retrieve
+    ; [&V, &M, len, i, &V[i], V[i], M[idx]]
+    copy 3
+    retrieve _STACK_HEAD
+    add 1
+    add
+    swap
+    store
+    ; [&V, &M, len, i, &V[i], V[i]]
+    copy 3
+    div
+    store
+    add 1
+    jump _quick_sort_mirrored_fetch
+  label _quick_sort_mirrored_fetch_end
+  ; [&V, &M, len, len]
+
+  pop
+  ; [&V, &M, i]
+  label _quick_sort_mirrored_mirror
+    dup
+    jumpz _quick_sort_mirrored_mirror_end
+    sub 1
+    dup
+    copy 2
+    add
+    ; [&V, &M, i, &M[i]]
+    copy 1
+    retrieve _STACK_HEAD
+    add 1
+    add
+    retrieve
+    store
+    jump _quick_sort_mirrored_mirror
+  label _quick_sort_mirrored_mirror_end
+
+  pop
+  pop
+  pop
+ret
+
 ; args &V len
 ; assumes len > 3
 label _qs_move_pivot
@@ -247,38 +338,58 @@ ret
 
 label sort_lib_end
 
+; retrieve _STACK_HEAD
+; add 1
+; push 3
+; push 2
+; push 1
+; push 3
+; call stack_freeze
 
-push 10
-dup
+; retrieve _STACK_HEAD
+; add 1
+; push 10
+; push 5
+; push 2
+; push 3
+; call stack_freeze
 
-storestr "Enter the characters to sort alphabetically, end with Enter"
-dup
-call printsln
-dup
-; [&start, &i]
+; push 3
+; call quick_sort_mirrored
 
-label input_phrase
-  dup
-  readc
-  dup
-  retrieve
-  ; [&start, &i, c]
-  push 10
-  sub
-  jumpz input_phrase_end
+; exit
 
-  add 1
-  jump input_phrase
-label input_phrase_end
+; push 10
+; dup
 
-dup
-push 0
-store
+; storestr "Enter the characters to sort alphabetically, end with Enter"
+; dup
+; call printsln
+; dup
+; ; [&start, &i]
 
-copy 1
-sub
-; [&start, len]
-copy 1
-swap
-call quick_sort
-call prints
+; label input_phrase
+;   dup
+;   readc
+;   dup
+;   retrieve
+;   ; [&start, &i, c]
+;   push 10
+;   sub
+;   jumpz input_phrase_end
+
+;   add 1
+;   jump input_phrase
+; label input_phrase_end
+
+; dup
+; push 0
+; store
+
+; copy 1
+; sub
+; ; [&start, len]
+; copy 1
+; swap
+; call quick_sort
+; call prints
