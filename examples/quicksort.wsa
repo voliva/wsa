@@ -359,37 +359,37 @@ label sort_lib_end
 
 ; exit
 
-; push 10
-; dup
+push 10
+dup
 
-; storestr "Enter the characters to sort alphabetically, end with Enter"
-; dup
-; call printsln
-; dup
-; ; [&start, &i]
+storestr "Enter the characters to sort alphabetically, end with Enter"
+dup
+call printsln
+dup
+; [&start, &i]
 
-; label input_phrase
-;   dup
-;   readc
-;   dup
-;   retrieve
-;   ; [&start, &i, c]
-;   push 10
-;   sub
-;   jumpz input_phrase_end
+label input_phrase
+  dup
+  readc
+  dup
+  retrieve
+  ; [&start, &i, c]
+  push 10
+  sub
+  jumpz input_phrase_end
 
-;   add 1
-;   jump input_phrase
-; label input_phrase_end
+  add 1
+  jump input_phrase
+label input_phrase_end
 
-; dup
-; push 0
-; store
+dup
+push 0
+store
 
-; copy 1
-; sub
-; ; [&start, len]
-; copy 1
-; swap
-; call quick_sort
-; call prints
+copy 1
+sub
+; [&start, len]
+copy 1
+swap
+call quick_sort
+call prints
