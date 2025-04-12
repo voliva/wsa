@@ -160,7 +160,8 @@ export const ProgramRunner: FC<{ program: Program }> = ({ program }) => {
   );
 };
 
-function memoryValueToString(value: bigint) {
+function memoryValueToString(value?: bigint) {
+  if (value == null) return "nil";
   if (value > 32n && value < 127n) {
     return (
       value.toString(16).padStart(3, "\u{00A0}") +

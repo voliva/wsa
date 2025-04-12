@@ -148,7 +148,6 @@ call memory_find_prev
 dup
 jumppn mfree_found
 pop
-pop
 ; return false as result
 push 0
 ret
@@ -221,48 +220,52 @@ ret
 ; args: data_pointer, size
 ; returns new address
 label realloc
-push 2
-call stack_freeze
-; calculate end memory in current location
-push -1
-call stack_get
-call stack_get_head
-add
-; Load [.. &target, &initial_prev]
-push -1
-call stack_get
-sub 2
-push _HEAP_HEAD
-call memory_find_prev
-; As a result we have [.. &prev]
-sub
-; &prev must be > end memory to be able to resize in place
-jumpn realloc_resize
-; malloc -> memcpy -> mfree
-call stack_get_head
-call malloc
-; On stack now we have [&dest]
-; We have to keep the new address to return it at the end
-dup
-; prepare stack [&source &dest size]
-push -1
-call stack_get
-swap
-call stack_get_head
-call memcpy
-push -1
-call stack_get
-call mfree
-jump realloc_end
-label realloc_resize
-push -1
-call stack_get
-sub 1
-call stack_get_head
-store
-label realloc_end
-push 2
-call stack_discard
+  push 2
+  call stack_freeze
+  ; calculate end memory in current location
+  push -1
+  call stack_get
+  call stack_get_head
+  add
+  ; Load [.. &target, &initial_prev]
+  push -1
+  call stack_get
+  sub 2
+  push _HEAP_HEAD
+  call memory_find_prev
+  ; As a result we have [.. &prev]
+  sub
+  ; &prev must be > end memory to be able to resize in place
+  jumpn realloc_resize
+    ; malloc -> memcpy -> mfree
+    call stack_get_head
+    call malloc
+    ; On stack now we have [&dest]
+    ; We have to keep the new address to return it at the end
+    dup
+    ; prepare stack [&source &dest size]
+    push -1
+    call stack_get
+    swap
+    copy 1
+    sub 1
+    retrieve
+    call memcpy
+    push -1
+    call stack_get
+    call mfree
+    pop
+  jump realloc_end
+  label realloc_resize
+    push -1
+    call stack_get
+    dup
+    sub 1
+    call stack_get_head
+    store
+  label realloc_end
+  push 2
+  call stack_discard
 ret
 
 ; Invariant stack: [&target, &prev]
