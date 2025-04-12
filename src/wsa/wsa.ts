@@ -1,9 +1,10 @@
-import lib_io from "./lib/io.wsa?raw" with { type: "text" };
-import lib_memory_stack from "./lib/memory_stack.wsa?raw" with { type: "text" };
-import lib_memory from "./lib/memory.wsa?raw" with { type: "text" };
-import lib_bitwise from "./lib/bitwise.wsa?raw" with { type: "text" };
 import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw" with { type: "text" };
+import lib_bitwise from "./lib/bitwise.wsa?raw" with { type: "text" };
+import lib_io from "./lib/io.wsa?raw" with { type: "text" };
 import lib_math from "./lib/math.wsa?raw" with { type: "text" };
+import lib_memory from "./lib/memory.wsa?raw" with { type: "text" };
+import lib_memory_stack from "./lib/memory_stack.wsa?raw" with { type: "text" };
+import lib_vector from "./lib/vector.wsa?raw" with { type: "text" };
 
 type Opcode =
   | { params: "none"; constr: () => string }
@@ -256,6 +257,9 @@ async function include(
   }
   if (filename === "math") {
     return compile(stringToLineStream(lib_math), getIncludedStream);
+  }
+  if (filename === "vector") {
+    return compile(stringToLineStream(lib_vector), getIncludedStream);
   }
   return compile(getIncludedStream(filename), getIncludedStream);
 }

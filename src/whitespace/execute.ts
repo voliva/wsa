@@ -284,9 +284,15 @@ function stepHeap(state: MachineState, instruction: HeapOp): MachineState {
       );
     }
     const value = state.heap[Number(addr)];
-    if (value === undefined) {
-      throw new Error(
-        `Heap op ${state.pc} failed: Access to uninitialized heap address ${addr}`
+    if (value == null) {
+      // The original wsa throws
+      // however, this is problematic for functions like memcpy which just have to copy w/e it's in an address to another
+      // Therfore, this version does allow loading nil values
+      // but warns in case any operation is done later on that would throw
+      console.warn(
+        `Heap op ${
+          state.pc
+        }: Access to uninitialized heap address ${addr.toString(16)}`
       );
     }
     state.stack.push(value);
@@ -308,7 +314,9 @@ function stepHeap(state: MachineState, instruction: HeapOp): MachineState {
         `Heap op ${state.pc} failed: Can't store on a negative address. addr = ${addr}`
       );
     }
-    state.heap[Number(addr)] = value;
+    if (value != null) {
+      state.heap[Number(addr)] = value;
+    }
   }
 
   state.pc++;
