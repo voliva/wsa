@@ -9,211 +9,207 @@ jump memory_lib_end
 ; arg: size
 ; Returns address of new block
 label malloc
-push 1
-call stack_freeze
+  push 1
+  call stack_freeze
 
-retrieve _HEAP_HEAD
-dup
-jumpz malloc_empty
+  retrieve _HEAP_HEAD
+  dup
+  jumpz malloc_empty
 
-; find an entry in-between two blocks where I can fit
-; preparing an invariant stack of [&head,&prev]. _HEAP_HEAD is &prev
-push _HEAP_HEAD
+    ; find an entry in-between two blocks where I can fit
+    ; preparing an invariant stack of [&head,&prev]. _HEAP_HEAD is &prev
+    push _HEAP_HEAD
 
-label malloc_find_empty
-; we need to check `&head+head.size+2 + size+2 < &prev`
-; then store in `&head+head.size+2`, and update &prev.next
-; get &head
-copy 1
-; get head.size
-dup
-add 1
-retrieve
-; &head + head.size
-add
-add 2
-; save `&head+head.size+2` for later
-dup
-call stack_get_head
-add
-add 2
-; we have 2 extra elements in the stack. Get &prev
-copy 2
-sub
-jumpnz malloc_in_between
-; the spot is not lare enough, remove the `&head+head.size+2`
-pop
-; remove &prev
-pop
-; get next head
-dup
-retrieve
-dup
-jumpz malloc_end_chain
-; satisfy invariant [&head,&prev]: Previous head is now prev
-swap
-jump malloc_find_empty
-label malloc_end_chain
-; head.next was pointing to 0, get the state ready to call malloc_allocate
-; TODO maybe malloc_empty can be reused?
-; remove the 0 (head.next)
-pop
-; head = &head - `size` - 2
-dup
-call stack_get_head
-sub
-sub 2
-dup
-; size = `size`
-call stack_get_head
-; prev = &head
-copy 3
-; next = 0
-push 0
-; Perform call
-call malloc_allocate
-slide 2
-jump malloc_end
+    label malloc_find_empty
+      ; we need to check `&head+head.size+2 + size+2 < &prev`
+      ; then store in `&head+head.size+2`, and update &prev.next
+      ; get &head
+      copy 1
+      ; get head.size
+      dup
+      add 1
+      retrieve
+      ; &head + head.size
+      add
+      add 2
+      ; save `&head+head.size+2` for later
+      dup
+      call stack_get_head
+      add
+      add 2
+      ; we have 2 extra elements in the stack. Get &prev
+      copy 2
+      sub
+      jumpnz malloc_in_between
+      ; the spot is not lare enough, remove the `&head+head.size+2`
+      pop
+      ; remove &prev
+      pop
+      ; get next head
+      dup
+      retrieve
+      dup
+      jumpz malloc_end_chain
+      ; satisfy invariant [&head,&prev]: Previous head is now prev
+      swap
+    jump malloc_find_empty
 
-label malloc_in_between
-; stack: [&head,&prev,&new_head]
-; goal: [&new_head,size,&prev,&head] = head,size,prev,next
-swap
-call stack_get_head
-swap
-copy 3
-; Perform call
-call malloc_allocate
-slide 1
-jump malloc_end
+    label malloc_end_chain
+      ; head.next was pointing to 0, get the state ready to call malloc_allocate
+      ; TODO maybe malloc_empty can be reused?
+      ; remove the 0 (head.next)
+      pop
+      ; head = &head - `size` - 2
+      dup
+      call stack_get_head
+      sub
+      sub 2
+      dup
+      ; size = `size`
+      call stack_get_head
+      ; prev = &head
+      copy 3
+      ; next = 0
+      push 0
+      ; Perform call
+      call malloc_allocate
+      slide 2
+    jump malloc_end
 
-label malloc_empty
-pop
+    label malloc_in_between
+      ; stack: [&head,&prev,&new_head]
+      ; goal: [&new_head,size,&prev,&head] = head,size,prev,next
+      swap
+      call stack_get_head
+      swap
+      copy 3
+      ; Perform call
+      call malloc_allocate
+      slide 1
+    jump malloc_end
 
-; head = _HEAP_HEAD - `size` - 2
-push _HEAP_HEAD
-call stack_get_head
-sub
-sub 2
-dup
-; size = `size`
-call stack_get_head
-; prev = _HEAP_HEAD
-push _HEAP_HEAD
-; next = 0
-push 0
-; Perform call
-call malloc_allocate
-pop
-; In stack we have the head of the element, because of the dup performed after calculating it
+  label malloc_empty
+  pop
 
-label malloc_end
-; Assuming we have addr of head on stack
-add 2
+  ; head = _HEAP_HEAD - `size` - 2
+  push _HEAP_HEAD
+  call stack_get_head
+  sub
+  sub 2
+  dup
+  ; size = `size`
+  call stack_get_head
+  ; prev = _HEAP_HEAD
+  push _HEAP_HEAD
+  ; next = 0
+  push 0
+  ; Perform call
+  call malloc_allocate
+  pop
+  ; In stack we have the head of the element, because of the dup performed after calculating it
 
-push 1
-call stack_discard
+  label malloc_end
+  ; Assuming we have addr of head on stack
+  add 2
+
+  push 1
+  call stack_discard
 ret
 
 ; arg: head, size, prev, next
 ; Returns head
 label malloc_allocate
-; Store `next` to &`head`
-copy 3
-swap
-store
-; Stack [head, size, prev]
-; Store &`head` to &`prev`
-copy 2
-store
-; Stack [head, size]
-; Store `size` to &`head`+1
-copy 1
-add 1
-swap
-store
-; Return &head
+  ; Store `next` to &`head`
+  copy 3
+  swap
+  store
+  ; Stack [head, size, prev]
+  ; Store &`head` to &`prev`
+  copy 2
+  store
+  ; Stack [head, size]
+  ; Store `size` to &`head`+1
+  copy 1
+  add 1
+  swap
+  store
+  ; Return &head
 ret
 
 ; args: data_pointer
 ; Returns boolean, whether it has been freed or not
 label mfree
-; Load [&target, &initial_prev]
-sub 2
-dup
-push _HEAP_HEAD
-call memory_find_prev
-; As a result we have [.. &prev]
-; if it's 0 we've reached the end without finding it
-dup
-jumppn mfree_found
-pop
-; return false as result
-push 0
-ret
-label mfree_found
-; set prev.next to data_pointer.next
-swap
-retrieve
-store
-push 1
+  ; Load [&target, &initial_prev]
+  sub 2
+  dup
+  push _HEAP_HEAD
+  call memory_find_prev
+  ; As a result we have [.. &prev]
+  ; if it's 0 we've reached the end without finding it
+  dup
+  jumppn mfree_found
+    pop
+    ; return false as result
+    push 0
+    ret
+  label mfree_found
+  ; set prev.next to data_pointer.next
+  swap
+  retrieve
+  store
+  push 1
 ret
 
 ; args: source, dest, size
 label memcpy
-; invariant [&end_dest,&dest,&source]
-copy 1
-add
-swap
-copy 2
+  ; invariant [&end_dest,&dest,&source]
+  copy 1
+  add
+  swap
+  copy 2
 
-label memcpy_copy_next
-copy 2
-copy 2
-sub
-jumpz memcpy_end
-dup
-retrieve
-copy 2
-swap
-store
+  label memcpy_copy_next
+  copy 2
+  copy 2
+  sub
+  jumpz memcpy_end
+    dup
+    retrieve
+    copy 2
+    swap
+    store
 
-add 1
-swap
-add 1
-swap
-jump memcpy_copy_next
+    add 1
+    swap
+    add 1
+    swap
+  jump memcpy_copy_next
 
-label memcpy_end
-pop
-pop
-pop
-pop
-
+  label memcpy_end
+  slide 3
+  pop
 ret
 
 ; args: dest, value, size
 label memset
-; invariant [value,&end_dest,&dest]
-copy 2
-add
-copy 2
-label memset_set_next
-dup
-copy 2
-sub
-jumpz memset_end
-dup
-copy 3
-store
-add 1
-jump memset_set_next
+  ; invariant [value,&end_dest,&dest]
+  copy 2
+  add
+  copy 2
+  label memset_set_next
+  dup
+  copy 2
+  sub
+  jumpz memset_end
+    dup
+    copy 3
+    store
+    add 1
+  jump memset_set_next
 
-label memset_end
-pop
-pop
-pop
-pop
+  label memset_end
+  slide 3
+  pop
 
 ret
 
@@ -271,28 +267,26 @@ ret
 ; Invariant stack: [&target, &prev]
 ; Will result in stack: [&prev]
 label memory_find_prev
-dup
-retrieve
-; if it's 0 we've reached the end without finding it
-dup
-jumppn memory_find_check
-pop
-pop
-pop
-pop
-; return 0 as result
-push 0
-ret
-label memory_find_check
-copy 2
-sub
-jumpz memory_found
-retrieve
-jump memory_find_prev
-label memory_found
-; set prev.next to data_pointer.next
-swap
-pop
+  dup
+  retrieve
+  ; if it's 0 we've reached the end without finding it
+  dup
+  jumppn memory_find_check
+    slide 3
+    pop
+    ; return 0 as result
+    push 0
+    ret
+  label memory_find_check
+  copy 2
+  sub
+  jumpz memory_found
+    retrieve
+    jump memory_find_prev
+  label memory_found
+  ; set prev.next to data_pointer.next
+  swap
+  pop
 ret
 
 label memory_lib_end
