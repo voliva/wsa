@@ -1,0 +1,65 @@
+include memory
+
+jump memcontainer_lib_end
+
+; args capacity
+; returns &M
+label memcontainer_new
+  push 1
+  call malloc
+  ; [cap,&M]
+  swap
+  call malloc
+  ; [&M,&D]
+  copy 1
+  swap
+  store
+ret
+
+; args &M
+label memcontainer_destroy
+  dup
+  retrieve
+  ; [&M,&D]
+  call mfree
+  pop
+  call mfree
+  pop
+ret
+
+; args &M
+; returns cap
+label memcontainer_get_capacity
+  retrieve
+  ; assuming internal stuff from memory but... who cares
+  sub 1
+  retrieve
+ret
+
+; args &M cap
+label memcontainer_ensure_capacity
+  swap
+  dup
+  retrieve
+  copy 1
+  call memcontainer_get_capacity
+  ; [minCap, &M, &D, cap]
+  copy 3
+  sub
+  jumpn __memcontainer_ensure_capacity_move
+    slide 2
+    pop
+    ret
+  label __memcontainer_ensure_capacity_move
+  ; [minCap, &M, &D]
+  copy 2
+  dup
+  div 2
+  add
+  call realloc
+  ; [minCap, &M, &D]
+  store
+  pop
+ret
+
+label memcontainer_lib_end
