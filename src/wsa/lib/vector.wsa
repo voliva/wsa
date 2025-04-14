@@ -146,7 +146,7 @@ label vector_slice
 ret
 
 ; args &Vtarget &Vsrc
-label vector_concat
+label vector_push_all
   copy 1
   call vector_get_length
   copy 1
@@ -217,7 +217,10 @@ label vector_splice
   ; [&V,offset,len,&Vspliced]
 
   dup
-  copy 2
+  copy 4
+  call vector_get_length
+  copy 3
+  sub
   call vector_truncate ; aka set length
 
   slide 3

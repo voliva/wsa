@@ -37,7 +37,7 @@ label memcontainer_get_capacity
 ret
 
 ; args &M cap
-label memcontainer_ensure_capactiy
+label memcontainer_ensure_capacity
   swap
   dup
   retrieve

@@ -1,12 +1,13 @@
-import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw" with { type: "text" };
 import lib_bitwise from "./lib/bitwise.wsa?raw" with { type: "text" };
+import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw" with { type: "text" };
 import lib_io from "./lib/io.wsa?raw" with { type: "text" };
 import lib_math from "./lib/math.wsa?raw" with { type: "text" };
+import lib_memcontainer from "./lib/memcontainer.wsa?raw" with { type: "text" };
 import lib_memory from "./lib/memory.wsa?raw" with { type: "text" };
 import lib_memory_stack from "./lib/memory_stack.wsa?raw" with { type: "text" };
 import lib_vector from "./lib/vector.wsa?raw" with { type: "text" };
 
-const libraries: Record<string, string> = { lib_bitwise_extensions, lib_bitwise, lib_io, lib_math, lib_memory, lib_memory_stack, lib_vector };
+const libraries: Record<string, string> = { lib_bitwise_extensions, lib_bitwise, lib_io, lib_math, lib_memory, lib_memory_stack, lib_vector, lib_memcontainer };
 
 type Opcode =
   | { params: "none"; constr: () => string }
@@ -240,10 +241,12 @@ async function include(
   if (includedFiles.has(filename)) return "";
   includedFiles.add(filename);
 
-  if (`lib_${filename}` in libraries) {
-    const content = extensions && (`lib_${filename}_extensions` in libraries) ? libraries[`lib_${filename}_extensions`] : libraries[filename]
+  const libName = `lib_${filename}`;
+  if (libName in libraries) {
+    const content = extensions && (`${libName}_extensions` in libraries) ? libraries[`${filename}_extensions`] : libraries[libName]
     return compile(stringToLineStream(content), getIncludedStream);
   }
+  console.log(libName, libraries);
 
   return compile(getIncludedStream(filename), getIncludedStream);
 }

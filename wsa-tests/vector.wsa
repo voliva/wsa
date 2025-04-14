@@ -1,0 +1,101 @@
+include vector
+
+push 0
+call vector_new
+
+dup
+push 1
+call vector_push
+dup
+push 2
+call vector_push
+dup
+push 3
+call vector_push
+dup
+push 4
+call vector_push
+
+dup
+call vector_pop
+outn ; 4
+
+dup
+call vector_get_length
+outn ; 3
+
+dup
+push 10
+push 2
+call vector_fill
+
+dup
+call vector_pop
+outn ; 2
+
+dup
+call vector_get_length
+outn ; 9
+
+push 3
+call vector_new
+dup
+push 3
+push 3
+call vector_fill
+
+copy 1
+copy 1
+call vector_push_all
+
+call vector_destroy
+
+dup
+call vector_get_length
+outn ; 12
+
+dup
+push 8
+push 3
+call vector_slice
+
+dup
+call vector_get_length
+outn
+; 3
+
+dup
+call vector_get_addr
+dup
+retrieve
+outn ; 2
+add 1
+retrieve
+outn ; 3
+
+call vector_destroy
+
+dup
+push 1
+push 10
+call vector_splice
+
+dup
+call vector_get_length
+outn
+; 2
+
+dup
+call vector_get_addr
+dup
+retrieve
+outn ; 2
+add 1
+retrieve
+outn ; 3
+
+call vector_destroy
+call vector_destroy
+
+;EXPECTED
+;432912323223

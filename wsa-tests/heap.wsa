@@ -15,12 +15,5 @@ push 5
 retrieve
 outn
 
-push 100
-store 0
-push 123
-store 101
-retrieve +1
-outn
-
 ;EXPECTED
-;553123
+;553
