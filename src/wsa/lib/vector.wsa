@@ -1,82 +1,73 @@
 include memory
+include memcontainer
 
 jump lib_vector_end
 
 ; args capacity
 ; returns &V
 label vector_new
-  ; Vec = [&data,cap,len]
-  push 3
-  call malloc
-  swap
-  ; [&V, cap]
-  dup
-  call malloc
-  ; [&V, cap, &data]
-  copy 2
-  swap
-  store
-  ; [&V, cap]
-  copy 1
   add 1
-  swap
-  store
-
+  call memcontainer_new
   dup
-  add 2
+
+  ; set length to 0
+  retrieve
   push 0
   store
 ret
 
 ; args &V
 label vector_destroy
-  dup
-  call vector_get_addr
-  call mfree
-  pop
-  call mfree
-  pop
+  call memcontainer_destroy
 ret
 
 ; args &V length value
 label vector_fill
   copy 2
   copy 2
-  call __vector_ensure_capacity
+  add 1
+  call memcontainer_ensure_capacity
 
   copy 2
-  call vector_get_addr
-  ; [&V,length,value,&dest]
+  retrieve
+  add 1
+  ; [&V,length,value,&D]
   swap
   copy 2
-  ; [&V,length,&dest,value,size]
+  ; [&V,length,&D,value,size]
   call memset
 
   ; [&V,length]
-  swap
-  add 2
-  swap
-  store
+  call vector_truncate ; aka set_length
 ret
 
 ; args &V
 ; returns &data
 label vector_get_addr
   retrieve
+  add 1
 ret
 
 ; args &V
 ; returns capacity
 label vector_get_capacity
-  add 1
-  retrieve
+  call memcontainer_get_capacity
 ret
 
 ; args &V
 ; returns length
 label vector_get_length
-  add 2
   retrieve
+  retrieve
+ret
+
+; args &V length
+; aka set_length
+label vector_truncate
+  swap
+  retrieve
+  swap
+  store
 ret
 
 ; args &V value
@@ -87,15 +78,16 @@ label vector_push
   add 1
   copy 1
   copy 1
-  call __vector_ensure_capacity
+  add 1
+  call memcontainer_ensure_capacity
 
   ; [value, &V, len+1]
-  dup
-  copy 2
-  add 2
-  swap
+  copy 1
+  retrieve
+  copy 1
   store
 
+  ; [value, &V, len+1]
   sub 1
   swap
   call vector_get_addr
@@ -120,22 +112,15 @@ label vector_pop
   ; in case of out-of-bounds we don't have exceptions :( undefined behaviour, but keep length to 0 to avoid other complications
   jumpn __vector_pop_exit
     copy 2
-    add 2
+    retrieve
     copy 2
     store
   label __vector_pop_exit
   slide 2
 ret
 
-; args &V length
-label vector_truncate
-  swap
-  add 2
-  swap
-  store
-ret
 
-; args &V offset length
+; args: &V offset length
 ; returns &Vslice
 label vector_slice
   dup
@@ -155,9 +140,8 @@ label vector_slice
   call memcpy
 
   dup
-  add 2
   copy 2
-  store
+  call vector_truncate ; aka set length
   slide 3
 ret
 
@@ -171,7 +155,7 @@ label vector_concat
   dup
   copy 3
   swap
-  call __vector_ensure_capacity
+  call memcontainer_ensure_capacity
 
   ; [&V,&Vsrc,len]
   ; memcpy args: source, dest, size
@@ -190,11 +174,9 @@ label vector_concat
   swap
   call memcpy
 
+  ; [&V,&Vsrc,len]
   slide 1
-  swap
-  add 2
-  swap
-  store
+  call vector_truncate ; aka set length
 ret
 
 ; args &V offset length
@@ -234,52 +216,11 @@ label vector_splice
   pop
   ; [&V,offset,len,&Vspliced]
 
-  ; set the length of &Vspliced
-  copy 3
-  call vector_get_length
+  dup
   copy 2
-  sub
-  copy 1
-  add 2
-  swap
-  store
+  call vector_truncate ; aka set length
 
   slide 3
-ret
-
-; args &V capacity
-label __vector_ensure_capacity
-  swap
-  dup
-  retrieve
-  copy 1
-  add 1
-  retrieve
-  ; [minCap, &V, &addr, cap]
-  copy 3
-  sub
-  jumpn __vector_ensure_capacity_move
-    slide 2
-    pop
-    ret
-  label __vector_ensure_capacity_move
-  ; [minCap, &V, &addr]
-  copy 2
-  dup
-  div 2
-  add
-  swap
-  copy 1
-  call realloc
-  ; [minCap, &V, cap, &addr]
-  copy 2
-  swap
-  store
-  swap
-  add 1
-  swap
-  store
-  pop
 ret
 
 label lib_vector_end

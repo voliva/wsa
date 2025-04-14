@@ -6,6 +6,8 @@ import lib_memory from "./lib/memory.wsa?raw" with { type: "text" };
 import lib_memory_stack from "./lib/memory_stack.wsa?raw" with { type: "text" };
 import lib_vector from "./lib/vector.wsa?raw" with { type: "text" };
 
+const libraries: Record<string, string> = { lib_bitwise_extensions, lib_bitwise, lib_io, lib_math, lib_memory, lib_memory_stack, lib_vector };
+
 type Opcode =
   | { params: "none"; constr: () => string }
   | { params: "integer"; constr: (x: bigint) => string }
@@ -238,29 +240,11 @@ async function include(
   if (includedFiles.has(filename)) return "";
   includedFiles.add(filename);
 
-  if (filename === "io") {
-    return compile(stringToLineStream(lib_io), getIncludedStream);
+  if (`lib_${filename}` in libraries) {
+    const content = extensions && (`lib_${filename}_extensions` in libraries) ? libraries[`lib_${filename}_extensions`] : libraries[filename]
+    return compile(stringToLineStream(content), getIncludedStream);
   }
-  if (filename === "memory") {
-    return compile(stringToLineStream(lib_memory), getIncludedStream);
-  }
-  if (filename === "memory_stack") {
-    return compile(stringToLineStream(lib_memory_stack), getIncludedStream);
-  }
-  if (filename === "bitwise") {
-    return compile(
-      stringToLineStream(
-        extensions ? lib_bitwise_extensions : lib_bitwise
-      ),
-      getIncludedStream
-    );
-  }
-  if (filename === "math") {
-    return compile(stringToLineStream(lib_math), getIncludedStream);
-  }
-  if (filename === "vector") {
-    return compile(stringToLineStream(lib_vector), getIncludedStream);
-  }
+
   return compile(getIncludedStream(filename), getIncludedStream);
 }
 function ret() {
