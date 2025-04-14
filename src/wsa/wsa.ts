@@ -6,8 +6,9 @@ import lib_memcontainer from "./lib/memcontainer.wsa?raw" with { type: "text" };
 import lib_memory from "./lib/memory.wsa?raw" with { type: "text" };
 import lib_memory_stack from "./lib/memory_stack.wsa?raw" with { type: "text" };
 import lib_vector from "./lib/vector.wsa?raw" with { type: "text" };
+import lib_heap from "./lib/heap.wsa?raw" with { type: "text" };
 
-const libraries: Record<string, string> = { lib_bitwise_extensions, lib_bitwise, lib_io, lib_math, lib_memory, lib_memory_stack, lib_vector, lib_memcontainer };
+const libraries: Record<string, string> = { lib_bitwise_extensions, lib_bitwise, lib_io, lib_math, lib_memory, lib_memory_stack, lib_vector, lib_memcontainer, lib_heap };
 
 type Opcode =
   | { params: "none"; constr: () => string }

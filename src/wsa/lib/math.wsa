@@ -1,6 +1,7 @@
 jump lib_math_end
 
 ; args n
+; returns 2^n
 label math_exp_2
   push 1
   swap
@@ -14,6 +15,19 @@ label math_exp_2
     jump math_exp_2_loop
   label math_exp_2_loop_end
   pop
+ret
+
+; args a,b
+; returns Max(a,b)
+label math_max
+  copy 1
+  copy 1
+  sub
+  jumpn __math_max_b_larger
+    pop
+    ret
+  label __math_max_b_larger
+  slide 1
 ret
 
 label lib_math_end

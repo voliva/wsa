@@ -28,6 +28,12 @@ label memcontainer_destroy
 ret
 
 ; args &M
+; returns &addr
+label memcontainer_get_addr
+  retrieve
+ret
+
+; args &M
 ; returns cap
 label memcontainer_get_capacity
   retrieve

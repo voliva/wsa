@@ -1,4 +1,4 @@
-include memory_stack
+include heap
 
 valueinteger _HEAP_HEAD 4294967294
 push 0

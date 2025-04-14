@@ -1,19 +1,7 @@
-push 3
-push 5
-store
-retrieve 3
-outn
+include heap
+
+push 0
+call heap_new
 
 push 5
-store 4
-retrieve 4
-outn
-
-push 3
-store 5
-push 5
-retrieve
-outn
-
-;EXPECTED
-;553
+call heap_allocate

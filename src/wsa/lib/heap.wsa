@@ -1,0 +1,155 @@
+include memory_stack
+; chicken-and-egg situation lol: memory uses heap, but heap uses memory to allocate / reallocate itself
+include memory
+include memcontainer
+include math
+
+jump heap_lib_end
+
+; this tries to reuse as much logic as possible with `memory`'s heap
+; but this heap is contained within `memory`'s heap and has a capacity
+; to make it simpler, when allocating we will make sure a new block can be added on top
+; to do this:
+; - Heap will be on top of `memcontainer`, so it can be resized without changing its reference
+; - Heap will keep both the head and tail of the heap
+;   - head to use `memory`'s utilities
+;   - tail to ensuring enough space when allocating new blocks.
+
+; arg: capacity
+; returns &H
+label heap_new
+  add 2
+  call memcontainer_new
+  dup
+  call heap_get_head_addr
+  push 0
+  store
+  dup
+  call heap_get_tail_addr
+  push 0
+  store
+ret
+
+; arg: &H
+; returns &tail
+label heap_get_tail_addr
+  dup
+  call memcontainer_get_capacity
+  sub 1
+  swap
+  call memcontainer_get_addr
+  add
+ret
+
+; arg: &H
+; returns &head
+label heap_get_head_addr
+  call heap_get_tail_addr
+  sub 1
+ret
+
+; arg: &H offset
+; returns &B
+label heap_get_block_addr
+  swap
+  call heap_get_head_addr
+  swap
+  sub
+ret
+
+; arg: &H
+; returns capacity
+label heap_get_capacity
+  call memcontainer_get_capacity
+  sub 2
+ret
+
+; arg: &H, size
+; returns block_offset
+label heap_allocate
+  copy 1
+  copy 1
+  copy 1
+  ; [&H,size,&H,size,&H]
+  call heap_get_tail_addr
+  retrieve
+  add
+  add 4 ; block has next+size, heap has head+tail
+  call memcontainer_ensure_capacity
+  ; TODO in case it was reallocated, we must move the head+tail to the new bottom position!
+
+  ; [&H,size]
+
+  copy 1
+  call heap_get_head_addr
+  call __heap_head_allocate
+
+  ; update tail if needed
+  swap
+  call heap_get_tail_addr
+  dup
+  retrieve
+  ; [block_offset,&T,T]
+  copy 2
+  add 2
+  call math_max
+  store
+ret
+
+; arg: size, &head
+; returns block_offset
+label __heap_head_allocate
+  dup
+  retrieve
+
+  jumpz heap_allocate_empty
+    ; TODO
+    ret
+  label heap_allocate_empty
+
+  swap
+  ; [&heap_head,size]
+  ; &head = &heap_head - `size` - 2
+  copy 1
+  copy 1
+  sub
+  sub 2
+  ; [&heap_head,size,&head]
+  swap
+  ; [&heap_head,&head,size]
+  copy 2 ; &prev = &heap_head
+  push 0 ; &next = 0
+  ; [&heap_head,&head,size,&prev,&next]
+  call __heap_head_insert_block
+  ; [&heap_head,&head]
+  add 2
+  swap
+  sub
+ret
+
+; arg: &head, size, &prev, &next
+; Returns head
+label __heap_head_insert_block
+  ; Store `next_offset` to &`head`
+  copy 4
+  sub
+  copy 4
+  swap
+  store
+  ; [&head,size,&prev]
+  ; Store `head_offset` to &`prev`
+  dup
+  copy 3
+  swap
+  sub
+  store
+  ; Stack [&head,size]
+  ; Store `size` to &`head`+1
+  copy 1
+  add 1
+  swap
+  store
+  ; Return &head
+ret
+
+label heap_lib_end
