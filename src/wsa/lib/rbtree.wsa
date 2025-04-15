@@ -1,0 +1,76 @@
+include slotmap
+
+jump lib_rbtree_end
+
+; RED=1
+; BLACK=0
+
+; returns &RB
+label rbtree_new
+  push 3 ; [red/black | parent | left | right, key, value]
+  call slotmap_new
+  ; 1st element in slotmap is a pointer to the root. 0 is nil pointer.
+  dup
+  dup
+  call slotmap_allocate
+  call slotmap_get_addr
+  push 0
+  store
+ret
+
+; args &RB key value
+label rbtree_insert
+  swap
+  copy 2
+  push 0
+  call slotmap_get_addr
+  retrieve
+  jumpz rbtree_insert_empty
+    ; TODO
+  ret
+
+  label rbtree_insert_empty
+  copy 2
+  call slotmap_allocate
+  ; [&RB value key id]
+  dup
+  copy 4
+  swap
+  call slotmap_get_addr
+  swap
+  ; [&RB value key &node id]
+  copy 4
+  push 0
+  call slotmap_get_addr
+  swap
+  store
+  ; [&RB value key &node]
+  dup
+  push 0x00000001_00000000_00000000_00000000 ; red | nil | nil | nil
+  store
+
+  swap
+  copy 1
+  add 1
+  swap
+  store
+  ; [&RB value &node]
+
+  add 2
+  swap
+  store
+  ; [&RB]
+  pop
+ret
+
+; args &RB key
+; returns [value,found]
+label rbtree_get
+ret
+
+; args &RB key
+label 
+  
+ret
+
+label lib_rbtree_end
