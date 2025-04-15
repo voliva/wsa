@@ -1,0 +1,112 @@
+; simplified version of a SlotMap
+; essentially it's a vector that keeps track of the gaps left when removing elements
+; so that when adding elements back in, the vector will reuse those gaps.
+
+include memory
+include vector
+
+jump slotmap_lib_end
+
+; [size, &Vdata, &Vgaps]
+
+; args element_size
+; returs &SM
+label slotmap_new
+  push 3
+  call malloc
+  ; [element_size, &SM]
+  dup
+  copy 2
+  store
+
+  swap
+  ; initial capacity = 5
+  mul 5
+  call vector_new
+  ; [&SM, &Vdata]
+  copy 1
+  add 1
+  swap
+  store
+
+  push 3
+  call vector_new
+  ; [&SM, &Vgaps]
+  copy 1
+  add 2
+  swap
+  store
+ret
+
+; args &SM
+label slotmap_destroy
+  dup
+  add 1
+  call vector_destroy
+  dup
+  add 2
+  call vector_destroy
+  call mfree
+  pop
+ret
+
+; args &SM
+; returns id
+label slotmap_allocate
+  dup
+  add 2
+  retrieve
+  ; [&SM, &Vgaps]
+  dup
+  call vector_get_length
+  jumpz slotmap_allocate_push
+    call vector_pop
+    slide 1
+    ret
+  label slotmap_allocate_push
+  pop
+
+  dup
+  retrieve
+  ; [&SM, size]
+  swap
+  add 1
+  retrieve
+  ; [size, &Vdata]
+  dup
+  call vector_get_length
+  ; [size, &Vdata, Vdata.len]
+  swap
+  copy 2
+  copy 2
+  add
+  ; [size, oldLen, &Vdata, newLen]
+  call vector_truncate ; aka set length
+  swap
+  div
+ret
+
+; args &SM id
+label slotmap_free
+  ; assuming you won't call free with the same id twice lol
+  swap
+  add 2
+  retrieve
+  swap
+  call vector_push
+ret
+
+; args &SM id
+; returns &addr
+label slotmap_get_addr
+  copy 1
+  retrieve
+  mul
+  swap
+  add 1
+  retrieve
+  call vector_get_addr
+  add
+ret
+
+label slotmap_lib_end
