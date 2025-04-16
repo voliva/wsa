@@ -5,6 +5,12 @@ jump lib_rbtree_end
 ; RED=1
 ; BLACK=0
 
+valueinteger __RBTREE_MASK_RB 0x1_00000000_00000000_00000000
+valueinteger __RBTREE_MASK_PARENT 0x1_00000000_00000000
+valueinteger __RBTREE_MASK_LEFT 0x1_00000000
+valueinteger __RBTREE_MASK_RIGHT 0x1
+valueinteger __RBTREE_MASK_MOD 0x1_00000000
+
 ; returns &RB
 label rbtree_new
   push 3 ; [red/black | parent | left | right, key, value]
@@ -66,10 +72,59 @@ ret
 ; args &RB key
 ; returns [value,found]
 label rbtree_get
+  copy 1
+  push 0
+  call slotmap_get_addr
+  retrieve
+  call __rbtree_get
+ret
+
+; args &RB key id
+; returns [value,found]
+label __rbtree_get
+  dup
+  jumpz __rbtree_get_not_found
+    copy 2
+    swap
+    call slotmap_get_addr
+    dup
+    add 1
+    retrieve
+    ; [&RB,key,&node,node.key]
+    copy 2
+    sub
+    dup
+    jumpz __rbtree_get_found
+      jumpn __rbtree_get_bigger
+        ; smaller
+        push __RBTREE_MASK_LEFT
+        jump __rbtree_get_continue
+      label __rbtree_get_bigger
+        push __RBTREE_MASK_RIGHT
+      label __rbtree_get_continue
+      ; [&RB,key,&node,mask]
+      swap
+      retrieve
+      swap
+      div
+      mod __RBTREE_MASK_MOD
+      call __rbtree_get
+      ret
+    label __rbtree_get_found
+    pop
+    ; [&RB,key,&node]
+    add 2
+    retrieve
+    slide 2
+    push 1
+    ret
+  label __rbtree_get_not_found
+  slide 2
+  push 0
 ret
 
 ; args &RB key
-label 
+label rbtree_remove
   
 ret
 
