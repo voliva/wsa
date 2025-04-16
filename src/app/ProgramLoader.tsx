@@ -1,11 +1,8 @@
 import { FC, useRef } from "react";
 import { Button } from "../lib";
 import { WhitespaceOp, parseWhitespaceProgram } from "../whitespace";
-import {
-  compileAndExit,
-  enableExtensions,
-  stringToLineStream,
-} from "../wsa/wsa";
+import { stringToLineStream } from "../wsa/loader";
+import { compileAndExit, enableExtensions } from "../wsa/wsa";
 
 export const ProgramLoader: FC<{
   onSubmit: (instructions: WhitespaceOp[]) => void;

@@ -1,13 +1,5 @@
-import lib_bitwise from "./lib/bitwise.wsa?raw" with { type: "text" };
-import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw" with { type: "text" };
-import lib_io from "./lib/io.wsa?raw" with { type: "text" };
-import lib_math from "./lib/math.wsa?raw" with { type: "text" };
-import lib_memcontainer from "./lib/memcontainer.wsa?raw" with { type: "text" };
-import lib_memory from "./lib/memory.wsa?raw" with { type: "text" };
-import lib_memory_stack from "./lib/memory_stack.wsa?raw" with { type: "text" };
-import lib_vector from "./lib/vector.wsa?raw" with { type: "text" };
-
-const libraries: Record<string, string> = { lib_bitwise_extensions, lib_bitwise, lib_io, lib_math, lib_memory, lib_memory_stack, lib_vector, lib_memcontainer };
+import { LineStream, load } from "./loader";
+import { Token } from "./tokens";
 
 type Opcode =
   | { params: "none"; constr: () => string }
@@ -57,25 +49,6 @@ const opcodes: { [key: string]: Opcode } = {
   valueinteger: { constr: valueinteger, params: "variable,integer" },
   dbg: { constr: dbg, params: "none" },
 };
-
-export type LineStream = (onLine: (line: string | null) => void) => () => void;
-export const stringToLineStream =
-  (str: string): LineStream =>
-  (onLine) => {
-    let stopped = false;
-
-    setTimeout(() => {
-      const lines = str.split("\n");
-      for (let i = 0; i < lines.length && !stopped; i++) {
-        onLine(lines[i]);
-      }
-      onLine(null);
-    });
-
-    return () => {
-      stopped = true;
-    };
-  };
 
 const valueMap: Record<string, string | bigint> = {};
 
@@ -198,7 +171,7 @@ function store(value?: bigint) {
 }
 function storestr(value: string) {
   return (
-    [...value + "\0"]
+    [...(value + "\0")]
       .map((v) => dup() + push(BigInt(v.codePointAt(0)!)) + store() + add(1n))
       .join("") + pop()
   );
@@ -233,23 +206,6 @@ function jumppn(jmpLabel: number) {
   return [jumpz(s1), jump(jmpLabel), label(s1)].join("");
 }
 
-const includedFiles = new Set<string>();
-async function include(
-  filename: string,
-  getIncludedStream: (filename: string) => LineStream
-) {
-  if (includedFiles.has(filename)) return "";
-  includedFiles.add(filename);
-
-  const libName = `lib_${filename}`;
-  if (libName in libraries) {
-    const content = extensions && (`${libName}_extensions` in libraries) ? libraries[`${filename}_extensions`] : libraries[libName]
-    return compile(stringToLineStream(content), getIncludedStream);
-  }
-  console.log(libName, libraries);
-
-  return compile(getIncludedStream(filename), getIncludedStream);
-}
 function ret() {
   return `\n\t\n`;
 }
@@ -285,113 +241,6 @@ function dbg() {
   return extensions ? "\n\n " : "";
 }
 
-type Token = WordToken | IntegerToken | StringToken | CharToken | VariableToken | DecorationToken;
-type WordToken = { type: "word"; value: string };
-type IntegerToken = { type: "integer"; value: bigint };
-type StringToken = { type: "string"; value: string };
-type CharToken = { type: "char"; value: bigint };
-type VariableToken = { type: "variable"; value: string };
-type DecorationToken = { type: "decoration", value: string };
-
-function tokenizeLine(line: string): Token[] {
-  const tokens: Token[] = [];
-  let match;
-  while (line) {
-    line = line.replace(/^\s+/, "");
-    if (!line) {
-      break;
-    }
-    if (line.startsWith(";#;")) {
-      tokens.push({
-        type: 'decoration',
-        value: line.replace(/^;#; ?/, "")
-      })
-      break;
-    } else if (line.startsWith(";")) {
-      break;
-    }
-    if (line.startsWith('"')) {
-      if (!(match = line.match(/^"((?:[^"\\\n]|\\.)*)"/))) {
-        throw "unterminated string";
-      }
-      const value = unescape(match[1], '"').join("");
-      tokens.push({ type: "string", value } as StringToken);
-    } else if (line.startsWith("'")) {
-      if (!(match = line.match(/^'((?:[^'\\\n]|\\.)*)'/))) {
-        throw "unterminated char";
-      }
-      const char = unescape(match[1], "'");
-      if (char.length === 0) {
-        throw "empty char";
-      } else if (char.length != 1) {
-        throw "more than one char";
-      }
-      const value = BigInt(char[0].codePointAt(0)!);
-      tokens.push({ type: "char", value } as CharToken);
-    } else if (line.startsWith("_")) {
-      if (!(match = line.match(/^(_[^\s;"']+)/))) {
-        throw "empty variable name";
-      }
-      tokens.push({ type: "variable", value: match[1] } as VariableToken);
-    } else {
-      match = line.match(/^([^\s;"']+)/)!;
-      try {
-        tokens.push({
-          type: "integer",
-          value: BigInt(match[1]),
-        } as IntegerToken);
-      } catch (ex) {
-        tokens.push({ type: "word", value: match[1] } as WordToken);
-      }
-    }
-    line = line.slice(match[0].length);
-  }
-  return tokens;
-}
-
-function unescape(stringLiteral: string, quote: string) {
-  const chars = [...stringLiteral];
-  const unescaped = [];
-  let i = 0;
-  while (i < chars.length) {
-    let char;
-    if (chars[i] == "\\") {
-      switch (chars[i + 1]) {
-        case quote:
-        case "\\":
-          char = chars[i + 1];
-          break;
-        case "b":
-          char = "\b";
-          break;
-        case "f":
-          char = "\f";
-          break;
-        case "n":
-          char = "\n";
-          break;
-        case "r":
-          char = "\r";
-          break;
-        case "t":
-          char = "\t";
-          break;
-        case "v":
-          char = "\v";
-          break;
-        default:
-          throw "invalid escape";
-      }
-      i++;
-    } else {
-      char = chars[i];
-    }
-    unescaped.push(char);
-    i++;
-  }
-  return unescaped;
-}
-
 function parseArgs(opcode: string, args: Token[]): string {
   if (!(opcode in opcodes)) {
     throw new Error(`invalid opcode ${opcode}`);
@@ -425,7 +274,6 @@ function parseArgs(opcode: string, args: Token[]): string {
       if (args.length === 1 && (arg = resolveIndex(args[0])) != undefined) {
         return op.constr(arg);
       }
-      console.log(op);
       throw `expected an index argument, but got ${formatArgTypes(args)}`;
     case "string":
       if (args.length === 1 && (arg = resolveString(args[0])) != undefined) {
@@ -519,79 +367,50 @@ export async function compile(
   inputStream: LineStream,
   getIncludedStream: (filename: string) => LineStream
 ) {
-  const results: (Promise<string> | string)[] = [];
+  const program = await load(
+    inputStream,
+    getIncludedStream,
+    extensions,
+    "main"
+  );
 
-  let lineNum = 0;
-  let onEnd: () => void = () => {};
-  const ended = new Promise<void>((resolve) => {
-    onEnd = resolve;
-  });
-
-  let prevInclude: Promise<string> = Promise.resolve("");
   const decorationLines: string[] = [];
-  inputStream((line) => {
-    if (line == null) {
-      onEnd();
-      return;
-    }
-
-    lineNum++;
+  const instructions: string[] = [];
+  for (const { line, source, tokens } of program) {
     try {
-      const tokens = tokenizeLine(line);
-      if (tokens.length === 0) {
-        return;
+      const [op, ...args] = tokens;
+      if (op.type === "decoration") {
+        decorationLines.push(op.value);
+        continue;
       }
-      if (tokens[0].type === 'decoration') {
-        decorationLines.push(tokens[0].value);
-        return;
+      if (op.type !== "word") {
+        throw new Error(`expected opcode, but got ${op.type}`);
       }
-      if (tokens[0].type !== "word") {
-        throw `expected opcode, but got ${tokens[0].type}`;
-      }
-      const opcode = tokens[0].value.toLowerCase();
-      const args = tokens.slice(1);
-      if (opcode == "include") {
-        if (
-          args.length !== 1 ||
-          !(
-            args[0].type === "word" ||
-            args[0].type === "string" ||
-            args[0].type === "variable"
-          )
-        ) {
-          throw `expected filename argument, but got ${formatArgTypes(args)}`;
-        }
-        const filename = args[0].value;
-        prevInclude = prevInclude.then(() =>
-          include(filename, getIncludedStream)
-        );
-        results.push(prevInclude);
-      } else {
-        results.push(prevInclude.then(() => parseArgs(opcode, args)));
-      }
+      const opcode = op.value.toLowerCase();
+      instructions.push(parseArgs(opcode, args));
     } catch (ex) {
       console.error(ex);
-      if (typeof ex === "string") {
-        throw new Error(`${ex} at line ${lineNum}: \`${line}\``);
-      }
-      throw new Error(`failed at line ${lineNum}: \`${line}\``);
+      throw new Error(
+        `failed compiling ${source} at line ${line}: ${
+          typeof ex === "string" ? ex : (ex as any).message
+        }`
+      );
     }
-  });
+  }
 
-  await ended;
-  const r = await Promise.all(results);
-  const joined = r.join("");
+  const joined = instructions.join("");
 
   if (decorationLines.length) {
     const split = joined.split("\n");
 
     decorationLines.forEach((d, i) => {
       if (split.length <= i) return;
-      split[i] = d
-        .replaceAll("\t", "  ")
-        .replaceAll(" ", "\u00A0")
-        .replaceAll("\n", "") + split[i];
-    })
+      split[i] =
+        d
+          .replaceAll("\t", "  ")
+          .replaceAll(" ", "\u00A0")
+          .replaceAll("\n", "") + split[i];
+    });
 
     return split.join("\n");
   }
