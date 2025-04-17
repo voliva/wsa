@@ -1,7 +1,5 @@
 include slotmap
 
-jump lib_rbtree_end
-
 ; RED=1
 ; BLACK=0
 
@@ -10,6 +8,8 @@ valueinteger __RBTREE_MASK_PARENT 0x1_00000000_00000000
 valueinteger __RBTREE_MASK_LEFT 0x1_00000000
 valueinteger __RBTREE_MASK_RIGHT 0x1
 valueinteger __RBTREE_MASK_MOD 0x1_00000000
+
+jump lib_rbtree_end
 
 ; returns &RB
 label rbtree_new
@@ -31,11 +31,61 @@ label rbtree_insert
   push 0
   call slotmap_get_addr
   retrieve
+  ; [&RB,value,key,root_id]
+  dup
   jumpz rbtree_insert_empty
-    ; TODO
-  ret
+  label __rbtree_insert_find_leaf
+    dup
+    copy 4
+    swap
+    call slotmap_get_addr
+    ; [&RB,value,key,node_id,&node]
+    dup
+    add 1
+    retrieve
+    ; [&RB,value,key,node_id,&node,node.key]
+    copy 3
+    sub
+    dup
+    jumpz __rbtree_insert_find_leaf_replace
+    jumpn __rbtree_insert_find_leaf_bigger
+      ; smaller
+      push __RBTREE_MASK_LEFT
+      jump __rbtree_insert_find_leaf_continue
+    label __rbtree_insert_find_leaf_bigger
+      push __RBTREE_MASK_RIGHT
+    label __rbtree_insert_find_leaf_continue
+    ; [&RB,value,key,node_id,&node,dir]
+    dup
+    copy 2
+    retrieve
+    swap
+    div
+    mod __RBTREE_MASK_MOD
+    ; [&RB,value,key,node_id,&node,dir,sub_id]
+    dup
+    jumpz __rbtree_insert_find_leaf_found
+    ; continue loop with sub_id as the node
+    slide 3
+  jump __rbtree_insert_find_leaf
+  label __rbtree_insert_find_leaf_replace
+    ; [&RB,value,key,node_id,&node,0]
+    pop
+    add 2
+    copy 3
+    store
+    ; [&RB,value,key,node_id]
+    slide 3
+    pop
+    ret
+  label __rbtree_insert_find_leaf_found
+    ; [&RB,value,key,node_id,&node,dir,0]
+    pop
+    call __rbtree_insert_to_node
+    ret
 
   label rbtree_insert_empty
+  pop
   copy 2
   call slotmap_allocate
   ; [&RB value key id]
@@ -67,6 +117,11 @@ label rbtree_insert
   store
   ; [&RB]
   pop
+ret
+
+; [&RB,value,key,node_id,&node,dir]
+label __rbtree_insert_to_node
+  ; TODO
 ret
 
 ; Got from https://en.wikipedia.org/wiki/Red%E2%80%93black_tree

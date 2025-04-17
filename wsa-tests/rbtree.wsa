@@ -1,0 +1,38 @@
+include rbtree
+
+call rbtree_new
+
+dup
+push 5
+push 2
+call rbtree_insert
+
+dup
+push 5
+call rbtree_get
+outn ; 1
+outn ; 2
+
+dup
+push 5
+push 3
+call rbtree_insert
+
+dup
+push 5
+call rbtree_get
+outn ; 1
+outn ; 3
+
+dup
+push 7
+call rbtree_get
+outn ; 0
+outn ; ?
+
+; EXPECTED 121300
+
+dup
+push 7
+push 4
+call rbtree_insert

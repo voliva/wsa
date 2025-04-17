@@ -57,7 +57,7 @@ export function tokenizeLine(line: string): Token[] {
       try {
         tokens.push({
           type: "integer",
-          value: BigInt(match[1]),
+          value: BigInt(match[1].replaceAll("_", "")),
         } as IntegerToken);
       } catch (ex) {
         tokens.push({ type: "word", value: match[1] } as WordToken);
