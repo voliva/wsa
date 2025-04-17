@@ -1,11 +1,12 @@
 import { Command } from "@commander-js/extra-typings";
-import { LineStream, compileAndExit, enableExtensions } from "./wsa/wsa";
-import readline from "readline";
 import fs from "node:fs";
-import { writeFile, readFile } from "node:fs/promises";
-import { execute, loadProgram } from "./whitespace/execute";
+import { readFile, writeFile } from "node:fs/promises";
+import readline from "readline";
 import { parseWhitespaceProgram } from "./whitespace";
+import { execute, loadProgram } from "./whitespace/execute";
 import { callbackInput, callbackOutput } from "./whitespace/io";
+import { LineStream } from "./wsa/loader";
+import { compileAndExit, enableExtensions } from "./wsa/wsa";
 
 const program = new Command();
 
