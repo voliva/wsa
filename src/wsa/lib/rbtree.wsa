@@ -70,77 +70,72 @@ label rbtree_insert
 ret
 
 ; Got from https://en.wikipedia.org/wiki/Red%E2%80%93black_tree
-; args &RB id dir opposite_dir
+; args &RB id dir
 label __rbtree_rotate
   ; Change root
-  copy 3
-  copy 3
+  copy 2
+  copy 2
   call slotmap_get_addr
-  ; [&RB,id,dir,opposite_dir,&sub]
-  copy 1
+  ; [&RB,id,dir,&sub]
+  copy 3
+  copy 2
+  call __rbtree_negate_dir
   copy 1
   retrieve
   swap
   div
   mod __RBTREE_MASK_MOD
-  ; [&RB,id,dir,opposite_dir,&sub,new_root_id]
+  ; [&RB,id,dir,&sub,new_root_id]
   copy 1
   retrieve
   div __RBTREE_MASK_PARENT
   mod __RBTREE_MASK_MOD
-  ; [&RB,id,dir,opposite_dir,&sub,new_root_id,parent_id]
+  ; [&RB,id,dir,&sub,new_root_id,parent_id]
   dup
   jumpz __rbtree_rotate_tree_root
-    copy 6
+    copy 5 ; &RB
     swap
     call slotmap_get_addr
-    ; [&RB,id,dir,opposite_dir,&sub,new_root_id,&parent]
+    ; [&RB,id,dir,&sub,new_root_id,&parent]
     dup
     retrieve
-    div __RBTREE_MASK_LEFT
-    mod __RBTREE_MASK_MOD
-    copy 6
-    sub
-    jumpz __rbtree_rotate_tree_root_left
-      push __RBTREE_MASK_RIGHT
-      jump __rbtree_rotate_tree_root_right
-    label __rbtree_rotate_tree_root_left
-      push __RBTREE_MASK_LEFT
-    label __rbtree_rotate_tree_root_right
-    ; [&RB,id,dir,opposite_dir,&sub,new_root_id,&parent,sub_dir]
+    copy 5 ; id
+    swap
+    call __rbtree_get_node_dir
+    ; [&RB,id,dir,&sub,new_root_id,&parent,sub_dir]
     copy 2
     call __rbtree_set_header_param
     jump __rbtree_rotate_tree_root_end
   label __rbtree_rotate_tree_root
     pop
-    copy 5
+    copy 4 ; &RB
     push 0
     call slotmap_get_addr
-    ; [&RB,id,dir,opposite_dir,&sub,new_root_id,&root]
+    ; [&RB,id,dir,&sub,new_root_id,&root]
     copy 1
     store
-    ; [&RB,id,dir,opposite_dir,&sub,new_root_id]
+    ; [&RB,id,dir,&sub,new_root_id]
   label __rbtree_rotate_tree_root_end
 
   ; update new_root references (new_root <-> sub <-> new_child)
   ; new_root->child[dir] = sub;
   dup
-  copy 6 ; &RB
+  copy 5 ; &RB
   swap
   call slotmap_get_addr
-  ; [&RB,id,dir,opposite_dir,&sub,new_root_id,&new_root]
+  ; [&RB,id,dir,&sub,new_root_id,&new_root]
   dup
   retrieve
-  copy 5 ; dir
+  copy 4 ; dir
   div
   mod __RBTREE_MASK_MOD
   swap
-  ; [&RB,id,dir,opposite_dir,&sub,new_root_id,new_child_id,&new_root]
+  ; [&RB,id,dir,&sub,new_root_id,new_child_id,&new_root]
   dup
-  copy 6 ; dir
-  copy 8 ; id
+  copy 5 ; dir
+  copy 7 ; id
   call __rbtree_set_header_param
-  ; [&RB,id,dir,opposite_dir,&sub,new_root_id,new_child_id,&new_root]
+  ; [&RB,id,dir,&sub,new_root_id,new_child_id,&new_root]
   ; new_root->parent = sub->parent
   copy 3 ; &sub
   retrieve
@@ -149,37 +144,37 @@ label __rbtree_rotate
   push __RBTREE_MASK_PARENT
   swap
   call __rbtree_set_header_param
-  ; [&RB,id,dir,opposite_dir,&sub,new_root_id,new_child_id]
+  ; [&RB,id,dir,&sub,new_root_id,new_child_id]
   ; sub->child[dir] = new_child_id
   dup
   copy 3 ; &sub
   swap
-  copy 6 ; dir
+  copy 5 ; dir
   swap
   call __rbtree_set_header_param
-  ; [&RB,id,dir,opposite_dir,&sub,new_root_id,new_child_id]
+  ; [&RB,id,dir,&sub,new_root_id,new_child_id]
   ; if (new_child) new_child->parent = sub;
   dup
   jumpz __rbtree_rotate_no_child
-    copy 6 ; &RB
+    copy 5 ; &RB
     swap
     call slotmap_get_addr
-    ; [&RB,id,dir,opposite_dir,&sub,new_root_id,&new_child]
+    ; [&RB,id,dir,&sub,new_root_id,&new_child]
     push __RBTREE_MASK_PARENT
-    copy 6 ; id
+    copy 5 ; id
     call __rbtree_set_header_param
-    ; [&RB,id,dir,opposite_dir,&sub,new_root_id]
+    ; [&RB,id,dir,&sub,new_root_id]
     ; match other branch
     push 0
   label __rbtree_rotate_no_child
   pop
-  ; [&RB,id,dir,opposite_dir,&sub,new_root_id]
+  ; [&RB,id,dir,&sub,new_root_id]
   ; sub->parent = new_root
   push __RBTREE_MASK_PARENT
   swap
   call __rbtree_set_header_param
-  ; [&RB,id,dir,opposite_dir]
-  slide 3
+  ; [&RB,id,dir]
+  slide 2
   pop
 ret
 
@@ -205,6 +200,40 @@ label __rbtree_set_header_param
   ; [&header,param,new_header]
   slide 1
   store
+ret
+
+; args dir
+; returns left/right mask
+label __rbtree_negate_dir
+  sub __RBTREE_MASK_LEFT
+  jumpz __rbtree_negate_dir_left
+    push __RBTREE_MASK_LEFT
+    ret
+  label __rbtree_negate_dir_left
+  push __RBTREE_MASK_RIGHT
+ret
+
+; args node_id parent_header
+; returns left/right mask
+label __rbtree_get_node_dir
+  ; swap
+  ; dup
+  ; copy 2
+  ; call slotmap_get_addr
+  ; retrieve
+  ; div __RBTREE_MASK_PARENT
+  ; mod __RBTREE_MASK_MOD
+  ; ; [node_id,&RB,parent_id]
+  ; call slotmap_get_addr
+  ; retrieve
+  div __RBTREE_MASK_LEFT
+  mod __RBTREE_MASK_MOD
+  sub
+  jumpz __rbtree_get_node_dir_left
+    push __RBTREE_MASK_RIGHT
+    ret
+  label __rbtree_get_node_dir_left
+  push __RBTREE_MASK_LEFT
 ret
 
 ; args &RB key
@@ -263,7 +292,7 @@ ret
 
 ; args &RB key
 label rbtree_remove
-  
+  ; TODO
 ret
 
 label lib_rbtree_end
