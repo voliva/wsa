@@ -36,3 +36,9 @@ dup
 push 7
 push 4
 call rbtree_insert
+
+dup
+push 7
+call rbtree_get
+outn ; 1
+outn ; 4
