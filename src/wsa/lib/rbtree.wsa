@@ -1,4 +1,5 @@
 include slotmap
+include memory_stack
 
 ; RED=1
 ; BLACK=0
@@ -81,7 +82,41 @@ label rbtree_insert
   label __rbtree_insert_find_leaf_found
     ; [&RB,value,key,node_id,&node,dir,0]
     pop
+    ; create node
+    copy 5 ; &RB
+    dup
+    call slotmap_allocate
+    ; [&RB,value,key,parent_id,&parent,dir,&RB,node_id]
+    copy 1
+    copy 1
+    call slotmap_get_addr
+    ; [&RB,value,key,parent_id,&parent,dir,&RB,node_id,&node]
+    dup
+    push 0x00000001_00000000_00000000_00000000 ; red | nil | nil | nil
+    copy 7 ; parent_id
+    push __RBTREE_MASK_PARENT
+    mul
+    add
+    store
+    ; [&RB,value,key,parent_id,&parent,dir,&RB,node_id,&node]
+    dup
+    add 1
+    copy 7 ; key
+    store
+    dup
+    add 2
+    copy 8 ; value
+    store
+    pop
+    ; [&RB,value,key,parent_id,&parent,dir,&RB,node_id]
+    ; targetting args [&RB,node_id,parent_id,&parent,dir]
+    copy 4 ; parent_id
+    copy 4
+    copy 4
     call __rbtree_insert_to_node
+    ; [&RB,value,key,parent_id,&parent,dir]
+    slide 5
+    pop
     ret
 
   label rbtree_insert_empty
@@ -119,9 +154,124 @@ label rbtree_insert
   pop
 ret
 
-; [&RB,value,key,node_id,&node,dir]
+; args [&RB,node_id,parent_id,&parent,dir]
 label __rbtree_insert_to_node
-  ; TODO
+  ; set parent -> child
+  copy 1
+  swap
+  copy 4 ; node_id
+  call __rbtree_set_header_param
+  ; [&RB,node_id,parent_id,&parent]
+  ; load grandparent
+  retrieve
+  div __RBTREE_MASK_PARENT
+  mod __RBTREE_MASK_MOD
+  ; [&RB,node_id,parent_id,grandparent_id]
+  push 2
+  call stack_freeze
+  ; [&RB,node_id] [parent_id,grandparent_id]
+  retrieve _STACK_HEAD
+  swap
+  retrieve _STACK_HEAD
+  sub 1
+  swap
+  ; [&RB,&grandparent_id,&parent_id,node_id]
+  label __rbtree_insert_to_node_loop
+    ;#3 if !parent end
+    copy 1
+    retrieve
+    dup
+    jumpz __rbtree_insert_to_node_end_5
+    ; [&RB,&grandparent_id,&parent_id,node_id,parent_id]
+    ;#1 if parent->color == BLACK end
+    copy 4 ; &RB
+    swap
+    call slotmap_get_addr
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent]
+    dup
+    retrieve
+    div __RBTREE_MASK_RB
+    mod __RBTREE_MASK_MOD
+    ; black is 0
+    jumpz __rbtree_insert_to_node_end_5
+    ;#4 if !grandparent { parent->color = BLACK, end }
+    copy 3 ; &grandparent_id
+    retrieve
+    dup
+    jumpz __rbtree_insert_to_node_end_no_grandparent
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent,grandparent_id]
+    copy 5 ; &RB
+    swap
+    call slotmap_get_addr
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent,&grandparent]
+    ; grab direction of parent
+    copy 3 ; &parent_id
+    retrieve
+    copy 1 ; &grandparent
+    retrieve
+    call __rbtree_get_node_dir
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent,&grandparent,dir]
+    ; grab uncle
+    copy 1
+    retrieve
+    copy 1
+    div
+    mod __RBTREE_MASK_MOD
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent,&grandparent,dir,uncle_id]
+    dup
+    jumpz __rbtree_insert_to_node_end_no_uncle
+    copy 7 ; &RB
+    swap
+    call slotmap_get_addr
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent,&grandparent,dir,&uncle]
+    dup
+    retrieve
+    push __RBTREE_MASK_RB
+    mod __RBTREE_MASK_MOD
+    jumpz __rbtree_insert_to_node_end_uncle_black ; woah, that's racist
+    ;#2
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent,&grandparent,dir,&uncle]
+    ; uncle->color = BLACK
+    push __RBTREE_MASK_RB
+    push 0
+    call __rbtree_set_header_param
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent,&grandparent,dir]
+    ; grandparent->color = RED
+    pop
+    push __RBTREE_MASK_RB
+    push 1
+    call __rbtree_set_header_param
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent]
+    ; parent->color = BLACK
+    push __RBTREE_MASK_RB
+    push 0
+    call __rbtree_set_header_param
+    ; [&RB,&grandparent_id,&parent_id,node_id]
+    ; node = grandparent
+    pop
+    copy 1
+    retrieve
+  jump __rbtree_insert_to_node_loop
+  label __rbtree_insert_to_node_end_uncle_black
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent,&grandparent,dir,&uncle]
+    ; can safely fallback to no_uncle
+  label __rbtree_insert_to_node_end_no_uncle
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent,&grandparent,dir,0]
+    ; TODO
+    jump __rbtree_insert_to_node_end_5
+  label __rbtree_insert_to_node_end_no_grandparent
+    ; [&RB,&grandparent_id,&parent_id,node_id,&parent,0]
+    pop
+    push __RBTREE_MASK_RB
+    push 0
+    call __rbtree_set_header_param
+    ; [&RB,&grandparent_id,&parent_id,node_id]
+    push 0 ; fallback to end_5
+  label __rbtree_insert_to_node_end_5
+  slide 4
+  pop
+  push 2
+  call stack_discard
 ret
 
 ; Got from https://en.wikipedia.org/wiki/Red%E2%80%93black_tree

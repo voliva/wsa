@@ -30,7 +30,7 @@ call rbtree_get
 outn ; 0
 outn ; ?
 
-; EXPECTED 121300
+; EXPECTED 12130?
 
 dup
 push 7
