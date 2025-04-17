@@ -199,11 +199,15 @@ label __rbtree_insert_to_node
     call __rbtree_get_node_dir
     ; [&RB,parent_id,node_id,&parent,&grandparent,dir]
     ; grab uncle
-    copy 1
+    dup
+    call __rbtree_negate_dir
+    copy 2
     retrieve
     copy 1
     div
     mod __RBTREE_MASK_MOD
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir,neg_dir,uncle_id]
+    slide 1
     ; [&RB,parent_id,node_id,&parent,&grandparent,dir,uncle_id]
     dup
     jumpz __rbtree_insert_to_node_end_no_uncle
@@ -213,7 +217,7 @@ label __rbtree_insert_to_node
     ; [&RB,parent_id,node_id,&parent,&grandparent,dir,&uncle]
     dup
     retrieve
-    push __RBTREE_MASK_RB
+    div __RBTREE_MASK_RB
     mod __RBTREE_MASK_MOD
     jumpz __rbtree_insert_to_node_end_uncle_black ; woah, that's racist
     ;#2
@@ -273,7 +277,7 @@ label __rbtree_insert_to_node
     sub
     jumpz __rbtree_insert_to_node_end_case_5
       ;#6
-      ; [&RB,parent_id,node_id,&parent,&grandparent,dir,neg_dir
+      ; [&RB,parent_id,node_id,&parent,&grandparent,dir,neg_dir]
       slide 1
       copy 5 ; &RB
       copy 3 ; &parent
@@ -347,7 +351,8 @@ label __rbtree_rotate
   copy 3
   copy 2
   call __rbtree_negate_dir
-  copy 1
+  ; [&RB,id,dir,&sub,&RB,neg_dir]
+  swap
   retrieve
   swap
   div
