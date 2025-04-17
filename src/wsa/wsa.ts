@@ -1,5 +1,6 @@
 import { LineStream, load } from "./loader";
 import { Token } from "./tokens";
+import { treeshake } from "./treeshake";
 
 type Opcode =
   | { params: "none"; constr: () => string }
@@ -373,10 +374,11 @@ export async function compile(
     extensions,
     "main"
   );
+  const reducedProgram = treeshake(program);
 
   const decorationLines: string[] = [];
   const instructions: string[] = [];
-  for (const { line, source, tokens } of program) {
+  for (const { line, source, tokens } of reducedProgram) {
     try {
       const [op, ...args] = tokens;
       if (op.type === "decoration") {
