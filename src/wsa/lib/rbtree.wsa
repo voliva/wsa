@@ -1,5 +1,4 @@
 include slotmap
-include memory_stack
 
 ; RED=1
 ; BLACK=0
@@ -335,8 +334,6 @@ label __rbtree_insert_to_node
   label __rbtree_insert_to_node_end_4
   slide 3
   pop
-  push 2
-  call stack_discard
 ret
 
 ; Got from https://en.wikipedia.org/wiki/Red%E2%80%93black_tree
@@ -563,6 +560,99 @@ ret
 ; args &RB key
 label rbtree_remove
   ; TODO
+ret
+
+; args &RB
+label rbtree_print
+  push 0
+  copy 1
+  push 0
+  call slotmap_get_addr
+  retrieve
+  call __rbtree_print_node
+ret
+
+; args &RB depth node_id
+label __rbtree_print_node
+  copy 1
+  call __rbtree_print_depth
+  dup
+  jumpz __rbtree_print_node_empty
+    copy 2
+    swap
+    call slotmap_get_addr
+    ; [&RB,depth,&node]
+    dup
+    retrieve
+    div __RBTREE_MASK_RB
+    mod __RBTREE_MASK_MOD
+    jumpz __rbtree_print_node_black
+      push 'R'
+      jump __rbtree_print_node_red
+    label __rbtree_print_node_black
+      push 'B'
+    label __rbtree_print_node_red
+    outc
+
+    push ' '
+    outc
+
+    dup
+    add 1
+    retrieve
+    outn
+
+    push ' '
+    outc
+
+    dup
+    add 2
+    retrieve
+    outn
+
+    push 10
+    outc
+
+    ; [&RB,depth,&node]
+    copy 2
+    copy 2
+    add 1
+    copy 2
+    retrieve
+    div __RBTREE_MASK_LEFT
+    mod __RBTREE_MASK_MOD
+    call __rbtree_print_node
+    
+    copy 2
+    copy 2
+    add 1
+    copy 2
+    retrieve
+    div __RBTREE_MASK_RIGHT
+    mod __RBTREE_MASK_MOD
+    call __rbtree_print_node
+    slide 2
+    pop
+  ret
+  label __rbtree_print_node_empty
+  push '#'
+  outc
+  push 10
+  outc
+  slide 2
+  pop
+ret
+
+; args depth
+label __rbtree_print_depth
+  dup
+  jumpz __rbtree_print_depth_end
+    push '-'
+    outc
+    sub 1
+  jump __rbtree_print_depth
+  label __rbtree_print_depth_end
+  pop
 ret
 
 label lib_rbtree_end
