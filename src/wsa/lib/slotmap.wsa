@@ -42,9 +42,11 @@ ret
 label slotmap_destroy
   dup
   add 1
+  retrieve
   call vector_destroy
   dup
   add 2
+  retrieve
   call vector_destroy
   call mfree
   pop
@@ -81,7 +83,7 @@ label slotmap_allocate
   copy 2
   add
   ; [size, oldLen, &Vdata, newLen]
-  call vector_truncate ; aka set length
+  call vector_set_length
   swap
   div
 ret
