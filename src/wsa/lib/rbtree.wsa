@@ -540,10 +540,14 @@ label rbtree_get
   call slotmap_get_addr
   retrieve
   call __rbtree_get
+  swap
+  add 2
+  retrieve
+  swap
 ret
 
 ; args &RB key id
-; returns [value,found]
+; returns [&node,found]
 label __rbtree_get
   dup
   jumpz __rbtree_get_not_found
@@ -576,8 +580,6 @@ label __rbtree_get
     label __rbtree_get_found
     pop
     ; [&RB,key,&node]
-    add 2
-    retrieve
     slide 2
     push 1
     ret
@@ -588,7 +590,27 @@ ret
 
 ; args &RB key
 label rbtree_remove
-  ; TODO
+  copy 1
+  swap
+  ; [&RB,&RB,key]
+  copy 1
+  push 0
+  call slotmap_get_addr
+  retrieve
+  ; [&RB,&RB,key,root_id]
+  call __rbtree_get
+  ; [&RB,&node,found]
+  jumpz __rbtree_not_found
+    call __rbtree_remove_node
+    ret
+  label __rbtree_not_found
+  slide 2
+  pop
+ret
+
+; args &RB &node
+label __rbtree_remove_node
+  
 ret
 
 ; args &RB
