@@ -610,7 +610,188 @@ ret
 
 ; args &RB &node
 label __rbtree_remove_node
-  
+  ; if it's the root, delete
+  dup
+  retrieve
+  div __RBTREE_MASK_PARENT
+  mod __RBTREE_MASK_MOD
+  jumppn __rbtree_remove_node_no_parent
+    copy 1
+    push 0
+    call slotmap_get_addr
+    dup
+    retrieve
+    ; [&RB,&node,&root,root_id]
+    copy 3
+    swap
+    call slotmap_free
+    push 0
+    store
+    pop
+    pop
+    ret
+  label __rbtree_remove_node_no_parent
+
+  dup
+  retrieve
+  dup
+  div __RBTREE_MASK_LEFT
+  mod __RBTREE_MASK_MOD
+  swap
+  div __RBTREE_MASK_RIGHT
+  mod __RBTREE_MASK_MOD
+  ; [&RB,&node,left,right]
+  jumpz __rbtree_remove_node_no_right
+  jumpz __rbtree_remove_node_only_right
+    ; case 2 children: find smallest of right tree, swap key+value, delete successor
+    copy 1
+    copy 1
+    retrieve
+    div __RBTREE_MASK_RIGHT
+    mod __RBTREE_MASK_MOD
+    copy 1
+    swap
+    call slotmap_get_addr
+    call __rbtree_find_smallest
+    ; [&RB,&node,&succesor]
+    copy 1
+    add 1
+    copy 1
+    add 1
+    retrieve
+    store
+    copy 1
+    add 2
+    copy 1
+    add 2
+    retrieve
+    store
+    slide 1
+    ; [&RB,&succesor]
+    call __rbtree_remove_node
+    ret
+  label __rbtree_remove_node_no_right
+  jumpz __rbtree_remove_node_no_child
+    ; only_left
+    push __RBTREE_MASK_LEFT
+    jump __rbtree_remove_node_one_child
+  label __rbtree_remove_node_only_right
+    push __RBTREE_MASK_RIGHT
+  label __rbtree_remove_node_one_child
+    ; [&RB,&node,dir]
+    dup
+    swap
+    retrieve
+    ; [&RB,dir,&node,node_header]
+    swap
+    copy 1
+    div __RBTREE_MASK_PARENT
+    mod __RBTREE_MASK_MOD
+    ; [&RB,dir,node_header,&node,parent_id]
+    copy 4 ; &RB
+    swap
+    call slotmap_get_addr
+    retrieve
+    ; [&RB,dir,node_header,&node,parent_header]
+    swap
+    copy 4 ; &RB
+    swap
+    copy 1 ; parent_header
+    call __rbtree_get_node_dir_by_ref
+    ; [&RB,dir,node_header,parent_header,node_dir]
+    swap
+    copy 1 ; node_dir
+    div
+    mod __RBTREE_MASK_MOD
+    ; [&RB,dir,node_header,node_dir,node_id]
+    copy 4 ; &RB
+    swap
+    call slotmap_free
+    ; [&RB,dir,node_header,node_dir]
+    ; parent[node_dir] = node_header[dir]
+    copy 1 ; node_header
+    div __RBTREE_MASK_PARENT
+    mod __RBTREE_MASK_MOD
+    swap
+    ; [&RB,dir,node_header,parent_id,node_dir]
+    copy 4 ; &RB
+    copy 2 ; parent_id
+    call slotmap_get_addr
+    swap
+    ; [&RB,dir,node_header,parent_id,&parent,node_dir]
+    copy 3 ; node_header
+    copy 5 ; dir
+    div
+    mod __RBTREE_MASK_MOD
+    call __rbtree_set_header_param
+    ; [&RB,dir,node_header,parent_id]
+    ; node_header[dir].parent = parent_id
+    push 1
+    call stack_reserve
+    retrieve _STACK_HEAD
+    swap
+    store
+    ; [&RB,dir,node_header] [parent_id]
+    swap
+    div
+    mod __RBTREE_MASK_MOD
+    call slotmap_get_addr
+    push __RBTREE_MASK_PARENT
+    retrieve _STACK_HEAD
+    retrieve
+    call __rbtree_set_header_param
+    push 1
+    call stack_discard
+    ret
+  label __rbtree_remove_node_no_child
+  ; if it's red => DELETE
+  ; if it's black => IT GETS WAY HARDER :( TODO
+  ; the problem is it causes an inbalance. For this version, I'll just assume they are ok
+  ; it's really the hardest case of the whole implementation of red-black trees, would easily
+  ; duplicate lines of code.
+  ; [&RB,&node]
+  dup
+  retrieve
+  div __RBTREE_MASK_PARENT
+  mod __RBTREE_MASK_MOD
+  copy 2
+  swap
+  call slotmap_get_addr
+  dup
+  retrieve
+  ; [&RB,&node,&parent,parent_header]
+  copy 3
+  copy 3
+  copy 2
+  call __rbtree_get_node_dir_by_ref
+  ; [&RB,&node,&parent,parent_header,node_dir]
+  copy 2
+  copy 1
+  push 0
+  call __rbtree_set_header_param
+  ; [&RB,&node,&parent,parent_header,node_dir]
+  div
+  mod __RBTREE_MASK_MOD
+  ; [&RB,&node,&parent,node_id]
+  slide 2
+  call slotmap_free
+ret
+
+; args &RB &node parent_header
+; returns left/right mask
+label __rbtree_get_node_dir_by_ref
+  div __RBTREE_MASK_LEFT
+  mod __RBTREE_MASK_MOD
+  copy 2
+  swap
+  call slotmap_get_addr
+  sub
+  slide 2
+  jumpz __rbtree_get_node_dir_by_ref_left
+    push __RBTREE_MASK_RIGHT
+    ret
+  label __rbtree_get_node_dir_by_ref_left
+  push __RBTREE_MASK_LEFT
 ret
 
 ; args &RB
