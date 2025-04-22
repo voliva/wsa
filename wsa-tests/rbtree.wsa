@@ -20,4 +20,19 @@ pop
 dup
 call rbtree_print
 
+push 8
+label loop2
+dup
+jumpz loop2_end
+    copy 1
+    copy 1
+    call rbtree_remove
+    sub 1
+jump loop2
+label loop2_end
+pop
+
+dup
+call rbtree_print
+
 call rbtree_destroy

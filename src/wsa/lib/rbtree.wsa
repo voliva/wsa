@@ -610,28 +610,6 @@ ret
 
 ; args &RB &node
 label __rbtree_remove_node
-  ; if it's the root, delete
-  dup
-  retrieve
-  div __RBTREE_MASK_PARENT
-  mod __RBTREE_MASK_MOD
-  jumppn __rbtree_remove_node_no_parent
-    copy 1
-    push 0
-    call slotmap_get_addr
-    dup
-    retrieve
-    ; [&RB,&node,&root,root_id]
-    copy 3
-    swap
-    call slotmap_free
-    push 0
-    store
-    pop
-    pop
-    ret
-  label __rbtree_remove_node_no_parent
-
   dup
   retrieve
   dup
@@ -679,8 +657,8 @@ label __rbtree_remove_node
     push __RBTREE_MASK_RIGHT
   label __rbtree_remove_node_one_child
     ; [&RB,&node,dir]
-    dup
     swap
+    dup
     retrieve
     ; [&RB,dir,&node,node_header]
     swap
@@ -750,6 +728,28 @@ label __rbtree_remove_node
   ; it's really the hardest case of the whole implementation of red-black trees, would easily
   ; duplicate lines of code.
   ; [&RB,&node]
+  ; if it's the root, delete
+  dup
+  retrieve
+  div __RBTREE_MASK_PARENT
+  mod __RBTREE_MASK_MOD
+  jumppn __rbtree_remove_node_has_parent
+    copy 1
+    push 0
+    call slotmap_get_addr
+    dup
+    retrieve
+    ; [&RB,&node,&root,root_id]
+    copy 3
+    swap
+    call slotmap_free
+    push 0
+    store
+    pop
+    pop
+    ret
+  label __rbtree_remove_node_has_parent
+
   dup
   retrieve
   div __RBTREE_MASK_PARENT
@@ -777,6 +777,25 @@ label __rbtree_remove_node
   call slotmap_free
 ret
 
+; args &RB &node
+label __rbtree_find_smallest
+  dup
+  retrieve
+  div __RBTREE_MASK_LEFT
+  mod __RBTREE_MASK_MOD
+  ; [&RB,&node,node.left]
+  dup
+  jumpz __rbtree_find_smallest_found
+    slide 1
+    copy 1
+    swap
+    call slotmap_get_addr
+    jump __rbtree_find_smallest
+  label __rbtree_find_smallest_found
+  pop
+  slide 1
+ret
+
 ; args &RB &node parent_header
 ; returns left/right mask
 label __rbtree_get_node_dir_by_ref
@@ -786,7 +805,7 @@ label __rbtree_get_node_dir_by_ref
   swap
   call slotmap_get_addr
   sub
-  slide 2
+  slide 1
   jumpz __rbtree_get_node_dir_by_ref_left
     push __RBTREE_MASK_RIGHT
     ret
