@@ -1,0 +1,909 @@
+include slotmap
+
+; RED=1
+; BLACK=0
+
+valueinteger __RBTREE_MASK_RB 0x1_00000000_00000000_00000000
+valueinteger __RBTREE_MASK_PARENT 0x1_00000000_00000000
+valueinteger __RBTREE_MASK_LEFT 0x1_00000000
+valueinteger __RBTREE_MASK_RIGHT 0x1
+valueinteger __RBTREE_MASK_MOD 0x1_00000000
+
+jump lib_rbtree_end
+
+; returns &RB
+label rbtree_new
+  push 3 ; [red/black | parent | left | right, key, value]
+  call slotmap_new
+  ; 1st element in slotmap is a pointer to the root. 0 is nil pointer.
+  dup
+  dup
+  call slotmap_allocate
+  call slotmap_get_addr
+  push 0
+  store
+ret
+
+; args &RB
+label rbtree_destroy
+  call slotmap_destroy
+ret
+
+; args &RB key value
+label rbtree_insert
+  swap
+  copy 2
+  push 0
+  call slotmap_get_addr
+  retrieve
+  ; [&RB,value,key,root_id]
+  dup
+  jumpz rbtree_insert_empty
+  label __rbtree_insert_find_leaf
+    dup
+    copy 4
+    swap
+    call slotmap_get_addr
+    ; [&RB,value,key,node_id,&node]
+    dup
+    add 1
+    retrieve
+    ; [&RB,value,key,node_id,&node,node.key]
+    copy 3
+    sub
+    dup
+    jumpz __rbtree_insert_find_leaf_replace
+    jumpn __rbtree_insert_find_leaf_bigger
+      ; smaller
+      push __RBTREE_MASK_LEFT
+      jump __rbtree_insert_find_leaf_continue
+    label __rbtree_insert_find_leaf_bigger
+      push __RBTREE_MASK_RIGHT
+    label __rbtree_insert_find_leaf_continue
+    ; [&RB,value,key,node_id,&node,dir]
+    dup
+    copy 2
+    retrieve
+    swap
+    div
+    mod __RBTREE_MASK_MOD
+    ; [&RB,value,key,node_id,&node,dir,sub_id]
+    dup
+    jumpz __rbtree_insert_find_leaf_found
+    ; continue loop with sub_id as the node
+    slide 3
+  jump __rbtree_insert_find_leaf
+  label __rbtree_insert_find_leaf_replace
+    ; [&RB,value,key,node_id,&node,0]
+    pop
+    add 2
+    copy 3
+    store
+    ; [&RB,value,key,node_id]
+    slide 3
+    pop
+    ret
+  label __rbtree_insert_find_leaf_found
+    ; [&RB,value,key,node_id,&node,dir,0]
+    pop
+    ; create node
+    ; this will potentially move the vector to a different address, we can't reuse &node
+    slide 1
+    ; [&RB,value,key,node_id,dir]
+    copy 4 ; &RB
+    dup
+    call slotmap_allocate
+    ; [&RB,value,key,parent_id,dir,&RB,node_id]
+    copy 1
+    copy 1
+    call slotmap_get_addr
+    ; [&RB,value,key,parent_id,dir,&RB,node_id,&node]
+    dup
+    push 0x00000001_00000000_00000000_00000000 ; red | nil | nil | nil
+    copy 6 ; parent_id
+    push __RBTREE_MASK_PARENT
+    mul
+    add
+    store
+    ; [&RB,value,key,parent_id,dir,&RB,node_id,&node]
+    dup
+    add 1
+    copy 6 ; key
+    store
+    dup
+    add 2
+    copy 7 ; value
+    store
+    pop
+    ; [&RB,value,key,parent_id,dir,&RB,node_id]
+    ; targetting args [&RB,node_id,parent_id,&parent,dir]
+    copy 3 ; parent_id
+    dup
+    copy 3 ; &RB
+    swap
+    call slotmap_get_addr
+    ; [&RB,value,key,parent_id,dir,&RB,node_id,parent_id,&parent]
+    copy 4 ; dir
+    call __rbtree_insert_to_node
+    ; [&RB,value,key,parent_id,&parent,dir]
+    slide 4
+    pop
+    ret
+
+  label rbtree_insert_empty
+  pop
+  copy 2
+  call slotmap_allocate
+  ; [&RB value key id]
+  dup
+  copy 4
+  swap
+  call slotmap_get_addr
+  swap
+  ; [&RB value key &node id]
+  copy 4
+  push 0
+  call slotmap_get_addr
+  swap
+  store
+  ; [&RB value key &node]
+  dup
+  push 0x00000001_00000000_00000000_00000000 ; red | nil | nil | nil
+  store
+
+  swap
+  copy 1
+  add 1
+  swap
+  store
+  ; [&RB value &node]
+
+  add 2
+  swap
+  store
+  ; [&RB]
+  pop
+ret
+
+; args [&RB,node_id,parent_id,&parent,dir]
+label __rbtree_insert_to_node
+  ; set parent -> child
+  copy 3 ; node_id
+  call __rbtree_set_header_param
+  ; [&RB,node_id,parent_id]
+  swap
+  ; [&RB,parent_id,node_id]
+  label __rbtree_insert_to_node_loop
+    ;#3 if !parent end
+    copy 1
+    dup
+    jumpz __rbtree_insert_to_node_end_4
+    ; [&RB,parent_id,node_id,parent_id]
+    ;#1 if parent->color == BLACK end
+    copy 3 ; &RB
+    swap
+    call slotmap_get_addr
+    ; [&RB,parent_id,node_id,&parent]
+    dup
+    retrieve
+    div __RBTREE_MASK_RB
+    mod __RBTREE_MASK_MOD
+    ; black is 0
+    jumpz __rbtree_insert_to_node_end_4
+    ; [&RB,parent_id,node_id,&parent]
+    ;#4 if !grandparent { parent->color = BLACK, end }
+    dup
+    retrieve
+    div __RBTREE_MASK_PARENT
+    mod __RBTREE_MASK_MOD
+    ; [&RB,parent_id,node_id,&parent,grandparent_id]
+    dup
+    jumpz __rbtree_insert_to_node_end_no_grandparent
+    ; [&RB,parent_id,node_id,&parent,grandparent_id]
+    copy 4 ; &RB
+    swap
+    call slotmap_get_addr
+    ; [&RB,parent_id,node_id,&parent,&grandparent]
+    ; grab direction of parent
+    copy 3 ; parent_id
+    copy 1 ; &grandparent
+    retrieve
+    call __rbtree_get_node_dir
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir]
+    ; grab uncle
+    dup
+    call __rbtree_negate_dir
+    copy 2
+    retrieve
+    copy 1
+    div
+    mod __RBTREE_MASK_MOD
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir,neg_dir,uncle_id]
+    slide 1
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir,uncle_id]
+    dup
+    jumpz __rbtree_insert_to_node_end_no_uncle
+    copy 6 ; &RB
+    swap
+    call slotmap_get_addr
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir,&uncle]
+    dup
+    retrieve
+    div __RBTREE_MASK_RB
+    mod __RBTREE_MASK_MOD
+    jumpz __rbtree_insert_to_node_end_uncle_black ; woah, that's racist
+    ;#2
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir,&uncle]
+    ; uncle->color = BLACK
+    push __RBTREE_MASK_RB
+    push 0
+    call __rbtree_set_header_param
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir]
+    ; grandparent->color = RED
+    pop
+    push __RBTREE_MASK_RB
+    push 1
+    call __rbtree_set_header_param
+    ; [&RB,parent_id,node_id,&parent]
+    dup
+    ; parent->color = BLACK
+    push __RBTREE_MASK_RB
+    push 0
+    call __rbtree_set_header_param
+    ; [&RB,parent_id,node_id,&parent]
+    ; node = grandparent
+    retrieve
+    div __RBTREE_MASK_PARENT
+    mod __RBTREE_MASK_MOD
+    slide 1
+    ; [&RB,parent_id,node_id]
+    ; parent = node->parent
+    slide 1
+    copy 1
+    copy 1
+    call slotmap_get_addr
+    ; [&RB,node_id,&node]
+    retrieve
+    div __RBTREE_MASK_PARENT
+    mod __RBTREE_MASK_MOD
+    swap
+    ; [&RB,parent_id,node_id]
+  jump __rbtree_insert_to_node_loop
+  label __rbtree_insert_to_node_end_uncle_black
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir,&uncle]
+    ; can safely fallback to no_uncle
+  label __rbtree_insert_to_node_end_no_uncle
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir,0]
+    pop
+    ;#5 if (node == parent->child[opposite_dir])
+    dup
+    call __rbtree_negate_dir
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir,neg_dir]
+    copy 3 ; &parent
+    retrieve
+    copy 1 ; neg_dir
+    div
+    mod __RBTREE_MASK_MOD
+    ; [&RB,parent_id,node_id,&parent,&grandparent,dir,neg_dir,sibling_id]
+    copy 5 ; node_id
+    sub
+    jumpz __rbtree_insert_to_node_end_case_5
+      ;#6
+      ; [&RB,parent_id,node_id,&parent,&grandparent,dir,neg_dir]
+      slide 1
+      copy 5 ; &RB
+      copy 3 ; &parent
+      retrieve
+      div __RBTREE_MASK_PARENT
+      mod __RBTREE_MASK_MOD
+      copy 2 ; neg_dir
+      call __rbtree_rotate
+      ; [&RB,parent_id,node_id,&parent,&grandparent,neg_dir]
+      pop
+      ; grandparent->color = RED
+      push __RBTREE_MASK_RB
+      push 1
+      call __rbtree_set_header_param
+      ; parent->color = BLACK
+      push __RBTREE_MASK_RB
+      push 0
+      call __rbtree_set_header_param
+      ; [&RB,parent_id,node_id]
+      push 0
+    jump __rbtree_insert_to_node_end_4
+    label __rbtree_insert_to_node_end_case_5
+      ; [&RB,parent_id,node_id,&parent,&grandparent,dir,neg_dir]
+      swap
+      ; load grandparent_id before we rotate stuff around
+      copy 3 ; &parent
+      retrieve
+      div __RBTREE_MASK_PARENT
+      mod __RBTREE_MASK_MOD
+      swap
+      ; [&RB,parent_id,node_id,&parent,&grandparent,neg_dir,grandpa_id,dir]
+      copy 7 ; &RB
+      swap
+      copy 7 ; parent_id
+      swap
+      call __rbtree_rotate
+      ; [&RB,parent_id,node_id,&parent,&grandparent,neg_dir,grandpa_id]
+      copy 6 ; &RB
+      swap
+      copy 2 ; neg_dir
+      call __rbtree_rotate
+      ; [&RB,parent_id,node_id,&parent,&grandparent,neg_dir]
+      pop
+      ; grandparent->color = RED
+      push __RBTREE_MASK_RB
+      push 1
+      call __rbtree_set_header_param
+      ; node->color = BLACK
+      ; [&RB,parent_id,node_id,&parent]
+      pop
+      dup
+      copy 3
+      swap
+      call slotmap_get_addr
+      push __RBTREE_MASK_RB
+      push 0
+      call __rbtree_set_header_param
+      ; [&RB,parent_id,node_id]
+      push 0
+    jump __rbtree_insert_to_node_end_4
+  label __rbtree_insert_to_node_end_no_grandparent
+    ; [&RB,parent_id,node_id,&parent,0]
+    pop
+    push __RBTREE_MASK_RB
+    push 0
+    call __rbtree_set_header_param
+    ; [&RB,parent_id,node_id]
+    push 0 ; fallback to end_4
+  label __rbtree_insert_to_node_end_4
+  slide 3
+  pop
+ret
+
+; Got from https://en.wikipedia.org/wiki/Red%E2%80%93black_tree
+; args &RB id dir
+label __rbtree_rotate
+  ; Change root
+  copy 2
+  copy 2
+  call slotmap_get_addr
+  ; [&RB,id,dir,&sub]
+  dup
+  copy 2
+  call __rbtree_negate_dir
+  ; [&RB,id,dir,&sub,&sub,neg_dir]
+  swap
+  retrieve
+  swap
+  div
+  mod __RBTREE_MASK_MOD
+  ; [&RB,id,dir,&sub,new_root_id]
+  copy 1
+  retrieve
+  div __RBTREE_MASK_PARENT
+  mod __RBTREE_MASK_MOD
+  ; [&RB,id,dir,&sub,new_root_id,parent_id]
+  dup
+  jumpz __rbtree_rotate_tree_root
+    copy 5 ; &RB
+    swap
+    call slotmap_get_addr
+    ; [&RB,id,dir,&sub,new_root_id,&parent]
+    dup
+    retrieve
+    copy 5 ; id
+    swap
+    call __rbtree_get_node_dir
+    ; [&RB,id,dir,&sub,new_root_id,&parent,sub_dir]
+    copy 2
+    call __rbtree_set_header_param
+    jump __rbtree_rotate_tree_root_end
+  label __rbtree_rotate_tree_root
+    pop
+    copy 4 ; &RB
+    push 0
+    call slotmap_get_addr
+    ; [&RB,id,dir,&sub,new_root_id,&root]
+    copy 1
+    store
+    ; [&RB,id,dir,&sub,new_root_id]
+  label __rbtree_rotate_tree_root_end
+
+  ; update new_root references (new_root <-> sub <-> new_child)
+  ; new_root->child[dir] = sub;
+  dup
+  copy 5 ; &RB
+  swap
+  call slotmap_get_addr
+  ; [&RB,id,dir,&sub,new_root_id,&new_root]
+  dup
+  retrieve
+  copy 4 ; dir
+  div
+  mod __RBTREE_MASK_MOD
+  swap
+  ; [&RB,id,dir,&sub,new_root_id,new_child_id,&new_root]
+  dup
+  copy 5 ; dir
+  copy 7 ; id
+  call __rbtree_set_header_param
+  ; [&RB,id,dir,&sub,new_root_id,new_child_id,&new_root]
+  ; new_root->parent = sub->parent
+  copy 3 ; &sub
+  retrieve
+  div __RBTREE_MASK_PARENT
+  mod __RBTREE_MASK_MOD
+  push __RBTREE_MASK_PARENT
+  swap
+  call __rbtree_set_header_param
+  ; [&RB,id,dir,&sub,new_root_id,new_child_id]
+  ; sub->child[dir_neg] = new_child_id
+  dup
+  copy 3 ; &sub
+  swap
+  copy 5 ; dir
+  call __rbtree_negate_dir
+  swap
+  call __rbtree_set_header_param
+  ; [&RB,id,dir,&sub,new_root_id,new_child_id]
+  ; if (new_child) new_child->parent = sub;
+  dup
+  jumpz __rbtree_rotate_no_child
+    copy 5 ; &RB
+    swap
+    call slotmap_get_addr
+    ; [&RB,id,dir,&sub,new_root_id,&new_child]
+    push __RBTREE_MASK_PARENT
+    copy 5 ; id
+    call __rbtree_set_header_param
+    ; [&RB,id,dir,&sub,new_root_id]
+    ; match other branch
+    push 0
+  label __rbtree_rotate_no_child
+  pop
+  ; [&RB,id,dir,&sub,new_root_id]
+  ; sub->parent = new_root
+  push __RBTREE_MASK_PARENT
+  swap
+  call __rbtree_set_header_param
+  ; [&RB,id,dir]
+  slide 2
+  pop
+ret
+
+; args &header param value
+label __rbtree_set_header_param
+  copy 2
+  retrieve
+  ; [&header,param,new_value,old_header]
+  ; reset current value to zero
+  dup
+  copy 3
+  div
+  mod __RBTREE_MASK_MOD
+  copy 3
+  mul
+  sub
+  ; [&header,param,new_value,header]
+  ; add new value
+  swap
+  copy 2
+  mul
+  add
+  ; [&header,param,new_header]
+  slide 1
+  store
+ret
+
+; args dir
+; returns left/right mask
+label __rbtree_negate_dir
+  sub __RBTREE_MASK_LEFT
+  jumpz __rbtree_negate_dir_left
+    push __RBTREE_MASK_LEFT
+    ret
+  label __rbtree_negate_dir_left
+  push __RBTREE_MASK_RIGHT
+ret
+
+; args node_id parent_header
+; returns left/right mask
+label __rbtree_get_node_dir
+  ; swap
+  ; dup
+  ; copy 2
+  ; call slotmap_get_addr
+  ; retrieve
+  ; div __RBTREE_MASK_PARENT
+  ; mod __RBTREE_MASK_MOD
+  ; ; [node_id,&RB,parent_id]
+  ; call slotmap_get_addr
+  ; retrieve
+  div __RBTREE_MASK_LEFT
+  mod __RBTREE_MASK_MOD
+  sub
+  jumpz __rbtree_get_node_dir_left
+    push __RBTREE_MASK_RIGHT
+    ret
+  label __rbtree_get_node_dir_left
+  push __RBTREE_MASK_LEFT
+ret
+
+; args &RB key
+; returns [value,found]
+label rbtree_get
+  copy 1
+  push 0
+  call slotmap_get_addr
+  retrieve
+  call __rbtree_get
+  swap
+  add 2
+  retrieve
+  swap
+ret
+
+; args &RB key id
+; returns [&node,found]
+label __rbtree_get
+  dup
+  jumpz __rbtree_get_not_found
+    copy 2
+    swap
+    call slotmap_get_addr
+    dup
+    add 1
+    retrieve
+    ; [&RB,key,&node,node.key]
+    copy 2
+    sub
+    dup
+    jumpz __rbtree_get_found
+      jumpn __rbtree_get_bigger
+        ; smaller
+        push __RBTREE_MASK_LEFT
+        jump __rbtree_get_continue
+      label __rbtree_get_bigger
+        push __RBTREE_MASK_RIGHT
+      label __rbtree_get_continue
+      ; [&RB,key,&node,mask]
+      swap
+      retrieve
+      swap
+      div
+      mod __RBTREE_MASK_MOD
+      call __rbtree_get
+      ret
+    label __rbtree_get_found
+    pop
+    ; [&RB,key,&node]
+    slide 2
+    push 1
+    ret
+  label __rbtree_get_not_found
+  slide 2
+  push 0
+ret
+
+; args &RB key
+label rbtree_remove
+  copy 1
+  swap
+  ; [&RB,&RB,key]
+  copy 1
+  push 0
+  call slotmap_get_addr
+  retrieve
+  ; [&RB,&RB,key,root_id]
+  call __rbtree_get
+  ; [&RB,&node,found]
+  jumpz __rbtree_not_found
+    call __rbtree_remove_node
+    ret
+  label __rbtree_not_found
+  slide 2
+  pop
+ret
+
+; args &RB &node
+label __rbtree_remove_node
+  dup
+  retrieve
+  dup
+  div __RBTREE_MASK_LEFT
+  mod __RBTREE_MASK_MOD
+  swap
+  div __RBTREE_MASK_RIGHT
+  mod __RBTREE_MASK_MOD
+  ; [&RB,&node,left,right]
+  jumpz __rbtree_remove_node_no_right
+  jumpz __rbtree_remove_node_only_right
+    ; case 2 children: find smallest of right tree, swap key+value, delete successor
+    copy 1
+    copy 1
+    retrieve
+    div __RBTREE_MASK_RIGHT
+    mod __RBTREE_MASK_MOD
+    copy 1
+    swap
+    call slotmap_get_addr
+    call __rbtree_find_smallest
+    ; [&RB,&node,&succesor]
+    copy 1
+    add 1
+    copy 1
+    add 1
+    retrieve
+    store
+    copy 1
+    add 2
+    copy 1
+    add 2
+    retrieve
+    store
+    slide 1
+    ; [&RB,&succesor]
+    call __rbtree_remove_node
+    ret
+  label __rbtree_remove_node_no_right
+  jumpz __rbtree_remove_node_no_child
+    ; only_left
+    push __RBTREE_MASK_LEFT
+    jump __rbtree_remove_node_one_child
+  label __rbtree_remove_node_only_right
+    push __RBTREE_MASK_RIGHT
+  label __rbtree_remove_node_one_child
+    ; [&RB,&node,dir]
+    swap
+    dup
+    retrieve
+    ; [&RB,dir,&node,node_header]
+    swap
+    copy 1
+    div __RBTREE_MASK_PARENT
+    mod __RBTREE_MASK_MOD
+    ; [&RB,dir,node_header,&node,parent_id]
+    copy 4 ; &RB
+    swap
+    call slotmap_get_addr
+    retrieve
+    ; [&RB,dir,node_header,&node,parent_header]
+    swap
+    copy 4 ; &RB
+    swap
+    copy 1 ; parent_header
+    call __rbtree_get_node_dir_by_ref
+    ; [&RB,dir,node_header,parent_header,node_dir]
+    swap
+    copy 1 ; node_dir
+    div
+    mod __RBTREE_MASK_MOD
+    ; [&RB,dir,node_header,node_dir,node_id]
+    copy 4 ; &RB
+    swap
+    call slotmap_free
+    ; [&RB,dir,node_header,node_dir]
+    ; parent[node_dir] = node_header[dir]
+    copy 1 ; node_header
+    div __RBTREE_MASK_PARENT
+    mod __RBTREE_MASK_MOD
+    swap
+    ; [&RB,dir,node_header,parent_id,node_dir]
+    copy 4 ; &RB
+    copy 2 ; parent_id
+    call slotmap_get_addr
+    swap
+    ; [&RB,dir,node_header,parent_id,&parent,node_dir]
+    copy 3 ; node_header
+    copy 5 ; dir
+    div
+    mod __RBTREE_MASK_MOD
+    call __rbtree_set_header_param
+    ; [&RB,dir,node_header,parent_id]
+    ; node_header[dir].parent = parent_id
+    push 1
+    call stack_reserve
+    retrieve _STACK_HEAD
+    swap
+    store
+    ; [&RB,dir,node_header] [parent_id]
+    swap
+    div
+    mod __RBTREE_MASK_MOD
+    call slotmap_get_addr
+    push __RBTREE_MASK_PARENT
+    retrieve _STACK_HEAD
+    retrieve
+    call __rbtree_set_header_param
+    push 1
+    call stack_discard
+    ret
+  label __rbtree_remove_node_no_child
+  ; if it's red => DELETE
+  ; if it's black => IT GETS WAY HARDER :( TODO
+  ; the problem is it causes an inbalance. For this version, I'll just assume they are ok
+  ; it's really the hardest case of the whole implementation of red-black trees, would easily
+  ; duplicate lines of code.
+  ; [&RB,&node]
+  ; if it's the root, delete
+  dup
+  retrieve
+  div __RBTREE_MASK_PARENT
+  mod __RBTREE_MASK_MOD
+  jumppn __rbtree_remove_node_has_parent
+    copy 1
+    push 0
+    call slotmap_get_addr
+    dup
+    retrieve
+    ; [&RB,&node,&root,root_id]
+    copy 3
+    swap
+    call slotmap_free
+    push 0
+    store
+    pop
+    pop
+    ret
+  label __rbtree_remove_node_has_parent
+
+  dup
+  retrieve
+  div __RBTREE_MASK_PARENT
+  mod __RBTREE_MASK_MOD
+  copy 2
+  swap
+  call slotmap_get_addr
+  dup
+  retrieve
+  ; [&RB,&node,&parent,parent_header]
+  copy 3
+  copy 3
+  copy 2
+  call __rbtree_get_node_dir_by_ref
+  ; [&RB,&node,&parent,parent_header,node_dir]
+  copy 2
+  copy 1
+  push 0
+  call __rbtree_set_header_param
+  ; [&RB,&node,&parent,parent_header,node_dir]
+  div
+  mod __RBTREE_MASK_MOD
+  ; [&RB,&node,&parent,node_id]
+  slide 2
+  call slotmap_free
+ret
+
+; args &RB &node
+label __rbtree_find_smallest
+  dup
+  retrieve
+  div __RBTREE_MASK_LEFT
+  mod __RBTREE_MASK_MOD
+  ; [&RB,&node,node.left]
+  dup
+  jumpz __rbtree_find_smallest_found
+    slide 1
+    copy 1
+    swap
+    call slotmap_get_addr
+    jump __rbtree_find_smallest
+  label __rbtree_find_smallest_found
+  pop
+  slide 1
+ret
+
+; args &RB &node parent_header
+; returns left/right mask
+label __rbtree_get_node_dir_by_ref
+  div __RBTREE_MASK_LEFT
+  mod __RBTREE_MASK_MOD
+  copy 2
+  swap
+  call slotmap_get_addr
+  sub
+  slide 1
+  jumpz __rbtree_get_node_dir_by_ref_left
+    push __RBTREE_MASK_RIGHT
+    ret
+  label __rbtree_get_node_dir_by_ref_left
+  push __RBTREE_MASK_LEFT
+ret
+
+; args &RB
+label rbtree_print
+  push 0
+  copy 1
+  push 0
+  call slotmap_get_addr
+  retrieve
+  call __rbtree_print_node
+ret
+
+; args &RB depth node_id
+label __rbtree_print_node
+  copy 1
+  call __rbtree_print_depth
+  dup
+  jumpz __rbtree_print_node_empty
+    copy 2
+    swap
+    call slotmap_get_addr
+    ; [&RB,depth,&node]
+    dup
+    retrieve
+    div __RBTREE_MASK_RB
+    mod __RBTREE_MASK_MOD
+    jumpz __rbtree_print_node_black
+      push 'R'
+      jump __rbtree_print_node_red
+    label __rbtree_print_node_black
+      push 'B'
+    label __rbtree_print_node_red
+    outc
+
+    push ' '
+    outc
+
+    dup
+    add 1
+    retrieve
+    outn
+
+    push ' '
+    outc
+
+    dup
+    add 2
+    retrieve
+    outn
+
+    push 10
+    outc
+
+    ; [&RB,depth,&node]
+    copy 2
+    copy 2
+    add 1
+    copy 2
+    retrieve
+    div __RBTREE_MASK_LEFT
+    mod __RBTREE_MASK_MOD
+    call __rbtree_print_node
+    
+    copy 2
+    copy 2
+    add 1
+    copy 2
+    retrieve
+    div __RBTREE_MASK_RIGHT
+    mod __RBTREE_MASK_MOD
+    call __rbtree_print_node
+    slide 2
+    pop
+  ret
+  label __rbtree_print_node_empty
+  push '#'
+  outc
+  push 10
+  outc
+  slide 2
+  pop
+ret
+
+; args depth
+label __rbtree_print_depth
+  dup
+  jumpz __rbtree_print_depth_end
+    push '-'
+    outc
+    sub 1
+  jump __rbtree_print_depth
+  label __rbtree_print_depth_end
+  pop
+ret
+
+label lib_rbtree_end

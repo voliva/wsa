@@ -1,12 +1,27 @@
-import lib_bitwise from "./lib/bitwise.wsa?raw" with { type: "text" };
 import lib_bitwise_extensions from "./lib/bitwise.extensions.wsa?raw" with { type: "text" };
+import lib_bitwise from "./lib/bitwise.wsa?raw" with { type: "text" };
 import lib_io from "./lib/io.wsa?raw" with { type: "text" };
 import lib_math from "./lib/math.wsa?raw" with { type: "text" };
 import lib_memcontainer from "./lib/memcontainer.wsa?raw" with { type: "text" };
 import lib_memory from "./lib/memory.wsa?raw" with { type: "text" };
 import lib_memory_stack from "./lib/memory_stack.wsa?raw" with { type: "text" };
+import lib_rbtree from "./lib/rbtree.wsa?raw" with { type: "text" };
+import lib_slotmap from "./lib/slotmap.wsa?raw" with { type: "text" };
 import lib_vector from "./lib/vector.wsa?raw" with { type: "text" };
 import { Token, tokenizeLine } from "./tokens";
+
+const libraries: Record<string, string> = {
+  lib_bitwise_extensions,
+  lib_bitwise,
+  lib_io,
+  lib_math,
+  lib_memory,
+  lib_memory_stack,
+  lib_vector,
+  lib_memcontainer,
+  lib_slotmap,
+  lib_rbtree,
+};
 
 export type LineStream = (onLine: (line: string | null) => void) => () => void;
 export const stringToLineStream =
@@ -60,17 +75,6 @@ async function* lineStreamToAsyncIterator(stream: LineStream) {
     yield content[lastEmission++];
   }
 }
-
-const libraries: Record<string, string> = {
-  lib_bitwise_extensions,
-  lib_bitwise,
-  lib_io,
-  lib_math,
-  lib_memory,
-  lib_memory_stack,
-  lib_vector,
-  lib_memcontainer,
-};
 
 const includedFiles = new Set<string>();
 function include(

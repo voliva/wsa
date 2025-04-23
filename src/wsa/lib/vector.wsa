@@ -62,12 +62,20 @@ label vector_get_length
 ret
 
 ; args &V length
-; aka set_length
 label vector_truncate
   swap
   retrieve
   swap
   store
+ret
+
+; args &V length
+label vector_set_length
+  copy 1
+  copy 1
+  add 1
+  call memcontainer_ensure_capacity
+  call vector_truncate
 ret
 
 ; args &V value
