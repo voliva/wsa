@@ -28,7 +28,7 @@ The heap is split in 2 pieces: A stack, used to store local variables, and a hea
 The heap stack helps storing temporary values. Usually, the native stack will suffice, but it has a few disadvantages:
 
 - It can only peek values below the stack pointer.
-- It can't rearrange values.
+- It can't rearrange values except for the top 2 (`swap`).
 - It's the only way of performing any operation (i.e. there are no registers).
 - This makes the offset for peeking also not stable.
 
@@ -96,6 +96,8 @@ It's based on [Burghard's WSA](https://github.com/wspace/burghard-wsa) as assemb
   - `inc` renamed to `readc`.
   - `inn` renamed to `readn`.
 
+The compiler also performs tree shaking: it won't include unreachable parts of the code (unused labels).
+
 ## Extensions
 
 While on debug mode, this interpreter adds some language extensions to debug or increase performance. For this, a few more operations are added, both to the assembler and the whitespace code ops:
@@ -120,10 +122,12 @@ See [Memory layout convention](#memory-layout-convention)
 ### Bitwise
 
 - `bitwise_and(a,b)`
+- `bitwise_xor(a,b)`
 - `bitwise_or(a,b)`
 - `bitwise_not(a)`
-- `bitwise_not_mod(a, m)`: Performs a bitwise not operation but only for the low `m` bytes.
+- `bitwise_not_mod(a, m)`: Performs a bitwise not operation but only for the low `m` bits.
 - `bitwise_mask(m)`: Creates a mask with `m` 1s (essentially 2^m-1)
+- `bitwise_rotl(n,m,bits)`: Rotates the number `n`, `m` positions to the left, with a mask of `bits` bits.
 
 This library uses the language extensions if they are enabled, otherwise uses the standard 0.3 WS opcodes.
 
@@ -137,3 +141,58 @@ This library uses the language extensions if they are enabled, otherwise uses th
 ### Math
 
 - `math_exp_2(v)`: Performs the operation 2^v
+
+### Memcontainer
+
+Small data structure to have a stable reference on other data structures that can get reallocated.
+
+It basically allocates 2 blocks: The container that can grow in size (and maybe reallocated), and a 1-byte one that just has the pointer to the container. This way the fixed one will keep the same reference across reallocations.
+
+To get the actual address, just `retrieve` to read the pointer value.
+
+- `memcontainer_new(capacity)`: Initializes a new container with an initial `capacity`
+- `memcontainer_destroy(&container)`: Frees up the reference `&container`
+- `memcontainer_get_capacity(&container)`: Returns the current capacity of the container.
+- `memcontainer_ensure_capacity(&container, capacity)`: If the container has less than `capacity` capacity, it resizes it.
+
+### Vector
+
+Resizable data structure to add / remove items to a list. It keeps a stable reference through `memcontainer`.
+
+- `vector_new(capacity)`: Creates a new vector
+- `vector_destroy(&vector)`: Frees up the reference `&vector`
+- `vector_fill(&vector, length, value)`: Fills in the vector with `value` for `length` (resizing the vector if needed).
+- `vector_get_addr(&vector)`: Returns the current base address of the vector.
+- `vector_get_capacity(&vector)`: Returns the capacity of the vector.
+- `vector_get_length(&vector)`: Returns the length of the vector.
+- `vector_set_length(&vector, length)`: Sets the length of the vector (truncating or resizing as needed).
+- `vector_push(&vector, value)`: Pushes the value to the vector.
+- `vector_pop(&vector)`: Pops the last element from the vector.
+- `vector_slice(&vector, offset, length)`: Returns a new vector with a copy from offset for `length` bytes.
+- `vector_splice(&vector, offset, length)`: Returns a new vector without the values from offset for `length` bytes.
+- `vector_push_all(&vector, &other_vec)`: Pushes all the elements of `&other_vec` to `&vector`
+
+### Slotmap
+
+Data structure to allocate and free fixed-size blocks a bit more efficiently than through the heap. Meant to build other data structures on top that perform a lot of small allocations (e.g. trees, linked lists, etc.).
+
+- `slotmap_new(element_size)`: Creates a new slotmap for elements of `element_size` bytes.
+- `slotmap_destroy(&slotmap)`: Frees up the reference `&slotmap`.
+- `slotmap_allocate(&slotmap)`: Allocates a new block, returns its id.
+- `slotmap_free(&slotmap, id)`: Frees up the space for the block `id`.
+- `slotmap_get_addr(&slotmap, id)`: Returns the base address for the block `id`.
+
+### RBTree
+
+Key-value data structure using a simplified implementation of a red-black tree. Deletion doesn't guarantee to keep the tree balanced.
+
+- `rbtree_new()`: Creates a new RBTree-
+- `rbtree_destroy(&RB)`: Frees up the reference `&RB`.
+- `rbtree_insert(&RB, key, value)`: Inserts a new entry with `key` and `value`.
+- `rbtree_get(&RB, key)`: Finds the entry by `key`, returns `[value,found]`, where found is 1 or 0 indicating if the value was found. If not found, `value` may have any random value.
+- `rbtree_remove(&RB, key)`: Removes the entry by `key`.
+- `rbtree_print(&RB)`: Prints the tree to the console (for debugging).
+- `rbtree_get_sorted(&RB)`: returns the entries [key,value] into a vector, sorted by key ascending.
+- `rbtree_is_empty(&RB)`: returns whether the tree is empty.
+- `rbtree_get_smallest(&RB)`: returns the entry with smallest key.
+- `rbtree_get_biggest(&RB)`: returns the entry with biggest key.

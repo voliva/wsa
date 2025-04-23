@@ -20,6 +20,10 @@ pop
 dup
 call rbtree_print
 
+dup
+call rbtree_get_sorted
+call vector_destroy
+
 push 8
 label loop2
 dup

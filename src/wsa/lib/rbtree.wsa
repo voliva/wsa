@@ -1,4 +1,5 @@
 include slotmap
+include vector
 
 ; RED=1
 ; BLACK=0
@@ -630,7 +631,8 @@ label __rbtree_remove_node
     copy 1
     swap
     call slotmap_get_addr
-    call __rbtree_find_smallest
+    push __RBTREE_MASK_LEFT
+    call __rbtree_find_extreme
     ; [&RB,&node,&succesor]
     copy 1
     add 1
@@ -777,23 +779,134 @@ label __rbtree_remove_node
   call slotmap_free
 ret
 
-; args &RB &node
-label __rbtree_find_smallest
-  dup
+; args &RB
+label rbtree_is_empty
+  push 0
+  call slotmap_get_addr
   retrieve
-  div __RBTREE_MASK_LEFT
-  mod __RBTREE_MASK_MOD
-  ; [&RB,&node,node.left]
+  jumpz __rbtree_is_empty_empty
+    push 0
+    ret
+  label __rbtree_is_empty_empty
+  push 1
+ret
+
+; args &RB
+; returns [key,value]
+label rbtree_get_smallest
+  push __RBTREE_MASK_LEFT
+  call __rbtree_get_extreme
+ret
+
+; args &RB
+; returns [key,value]
+label rbtree_get_biggest
+  push __RBTREE_MASK_RIGHT
+  call __rbtree_get_extreme
+ret
+
+
+; args &RB dir
+; returns [key,value]
+label __rbtree_get_extreme
+  copy 1
   dup
-  jumpz __rbtree_find_smallest_found
+  push 0
+  call slotmap_get_addr
+  retrieve
+  call slotmap_get_addr
+  ; [&RB, dir, &root]
+  swap
+  call __rbtree_find_extreme
+  dup
+  add 1
+  retrieve
+  swap
+  add 2
+  retrieve
+ret
+
+; args &RB &node dir
+; returns &node
+label __rbtree_find_extreme
+  copy 1
+  retrieve
+  swap
+  div
+  mod __RBTREE_MASK_MOD
+  ; [&RB,&node,node[dir]]
+  dup
+  jumpz __rbtree_find_extreme_found
     slide 1
     copy 1
     swap
     call slotmap_get_addr
-    jump __rbtree_find_smallest
-  label __rbtree_find_smallest_found
+    jump __rbtree_find_extreme
+  label __rbtree_find_extreme_found
   pop
   slide 1
+ret
+
+; args &RB
+; returns &vec
+label rbtree_get_sorted
+  push 5
+  call vector_new
+  swap
+  ; [&vec,&RB]
+  copy 1
+  copy 1 ; &RB
+  push 0
+  call slotmap_get_addr
+  retrieve
+  call __rbtree_push_sorted
+  pop
+  pop
+ret
+
+; args &RB &vec node_id
+; returns &RB &vec
+label __rbtree_push_sorted
+  dup
+  jumpz __rbtree_push_sorted_leaf
+    copy 2
+    swap
+    call slotmap_get_addr
+    dup
+    retrieve
+    ; [&RB,&vec,&node,node_header]
+    copy 3
+    copy 3
+    ; [&RB,&vec,&node,node_header,&RB,&vec]
+    copy 2 ; node_header
+    div __RBTREE_MASK_LEFT
+    mod __RBTREE_MASK_MOD
+    call __rbtree_push_sorted
+
+    ; [&RB,&vec,&node,node_header,&RB,&vec]
+    dup
+    copy 4 ; &node
+    add 1
+    retrieve
+    call vector_push
+    dup
+    copy 4 ; &node
+    add 2
+    retrieve
+    call vector_push
+
+    ; [&RB,&vec,&node,node_header,&RB,&vec]
+    copy 2 ; node_header
+    div __RBTREE_MASK_RIGHT
+    mod __RBTREE_MASK_MOD
+    call __rbtree_push_sorted
+
+    ; [&RB,&vec,&node,node_header,&RB,&vec]
+    slide 3
+    pop
+    ret
+  label __rbtree_push_sorted_leaf
+  pop
 ret
 
 ; args &RB &node parent_header
