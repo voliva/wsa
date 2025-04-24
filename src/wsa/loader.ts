@@ -90,7 +90,7 @@ function include(
     libName in libraries
       ? stringToLineStream(
           extensions && `${libName}_extensions` in libraries
-            ? libraries[`${filename}_extensions`]
+            ? libraries[`${libName}_extensions`]
             : libraries[libName]
         )
       : getIncludedStream(filename);
