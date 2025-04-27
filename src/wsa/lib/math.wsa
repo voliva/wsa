@@ -1,6 +1,7 @@
 jump lib_math_end
 
 ; args n
+; returns 2^n
 label math_exp_2
   push 1
   swap

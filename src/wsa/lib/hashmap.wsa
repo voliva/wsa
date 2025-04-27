@@ -1,0 +1,297 @@
+include memcontainer
+include memory
+
+valueinteger __HASHMAP_MAP_OFFSET 2
+
+jump lib_hashmap_end
+
+; args capacity
+; returns &HM
+label hashmap_new
+  dup
+  ; [cap,len] + c * [full,key,value]
+  mul 3
+  add __HASHMAP_MAP_OFFSET
+  call memcontainer_new
+  ; [cap,&HM]
+  swap
+  copy 1
+  retrieve
+  swap
+  ; [&HM,&data,cap]
+  copy 1
+  copy 1
+  store
+  ; [&HM,&data,cap]
+  ; store len=0
+  copy 1
+  add 1
+  push 0
+  store
+  ; [&HM,&data,cap]
+  ; initialize rest with 0s
+  swap
+  add __HASHMAP_MAP_OFFSET
+  swap
+  mul 3
+  push 0
+  swap
+  ; [&HM,&map_data,0,cap*3]
+  call memset
+ret
+
+; args &HM
+label hashmap_destroy
+  call memcontainer_destroy
+ret
+
+; args &HM key value
+label hashmap_insert
+  copy 2
+  retrieve
+  ; [&HM,key,value,&data]
+  dup
+  add 1
+  ; [&HM,key,value,&data,&len]
+  dup
+  retrieve
+  ; TODO length doesn't increase if the item is getting replaced!!
+  add 1
+  ; [&HM,key,value,&data,&len,len]
+  swap
+  copy 1
+  store
+  ; [&HM,key,value,&data,len]
+  mul 2
+  copy 1
+  retrieve
+  ; [&HM,key,value,&data,len*2,cap]
+  sub
+  jumpn __hashmap_insert_insert
+    ; we have to relocate, we might have too many collisions otherwise (50% chance).
+    ; [&HM,key,value,&old_data]
+    dup
+    retrieve
+    dup
+    mul 2
+    ; [&HM,key,value,&old_data,old_cap,cap]
+    dup
+    ; [cap,len] + c * [full,key,value]
+    mul 3
+    add __HASHMAP_MAP_OFFSET
+    call malloc
+    ; [&HM,key,value,&old_data,old_cap,cap,&data]
+    copy 6 ; &HM
+    copy 1 ; &data
+    store
+    ; store cap
+    dup
+    copy 2
+    store
+    ; store len
+    copy 3 ; &old_data
+    add 1
+    retrieve
+    copy 1 ; &data
+    add 1
+    swap
+    store
+    ; pre-initialize to 0
+    dup
+    add __HASHMAP_MAP_OFFSET
+    copy 2 ; cap
+    mul 3
+    push 0
+    swap
+    call memset
+    ; [&HM,key,value,&old_data,old_cap,cap,&data]
+    ; move all the values!
+    copy 2 ; old_cap
+    ; [&HM,key,value,&old_data,old_cap,cap,&data,i]
+    label __hashmap_insert_relocate_loop
+    dup
+    jumpz __hashmap_insert_relocate_loop_end
+      sub 1
+      copy 4 ; &old_data
+      copy 1 ; i
+      mul 3
+      add __HASHMAP_MAP_OFFSET
+      add
+      ; [&HM,key,value,&old_data,old_cap,cap,&data,i,&old_data[i]]
+      dup
+      retrieve
+      jumpz __hashmap_insert_relocate_loop_end_continue
+        ; prepare &data,key,value for insert
+        copy 2 ; &data
+        copy 1 ; &old_data[i]
+        add 1
+        retrieve
+        copy 2 ; &old_data[i]
+        add 2
+        retrieve
+        call __hashmap_insert_key_value
+      label __hashmap_insert_relocate_loop_end_continue
+      ; [&HM,key,value,&old_data,old_cap,cap,&data,i,&old_data[i]]
+      pop
+    jump __hashmap_insert_relocate_loop
+    label __hashmap_insert_relocate_loop_end
+    ; [&HM,key,value,&old_data,old_cap,cap,&data,0]
+    pop
+    copy 3 ; &old_data
+    call mfree
+    slide 3
+  label __hashmap_insert_insert
+  ; [&HM,key,value,&data]
+  swap
+  ; [&HM,key,&data,value]
+  copy 2 ; key
+  swap
+  ; [&HM,key,&data,key,value]
+  call __hashmap_insert_key_value
+  ; [&HM,key]
+  pop
+  pop
+ret
+
+; args &data key value
+label __hashmap_insert_key_value
+  copy 2
+  copy 2
+  call __hashmap_find_spot
+  ; [&data,key,value,&addr,found]
+  pop
+  ; full=1
+  dup
+  push 1
+  store
+  ; set key
+  dup
+  add 1
+  ; [&data,key,value,&addr,&key]
+  copy 3
+  store
+  ; set value
+  dup
+  add 2
+  copy 2 ; value
+  store
+  ; [&data,key,value,&addr]
+  slide 3
+  pop
+ret
+
+; args &HM key
+; returns [value,found]
+label hashmap_get
+  swap
+  retrieve
+  swap
+  call __hashmap_find_spot
+  swap
+  add 2
+  retrieve
+  swap
+ret
+
+; args &HM key
+label hashmap_remove
+  ; removing can leave gaps, which means that following find could fail / stop early.
+  ; after removing, every entry after the one removed must be relocated, until we find another gap.
+  ; TODO
+ret
+
+; args &HM
+; returns size
+label hashmap_get_size
+  retrieve
+  add 1
+  retrieve
+ret
+
+; args &RB
+; returns &vec
+label hashmap_get_entries
+  ; TODO
+ret
+
+; args &data key
+; returns [&addr,found]
+label __hashmap_find_spot
+  copy 1
+  retrieve
+  swap
+  ; [&data,cap,key]
+  copy 1
+  copy 1
+  call __hashmap_get_hash
+  ; [&data,cap,key,offset]
+  label __hashmap_find_spot_loop
+    copy 3
+    copy 1
+    add
+    add __HASHMAP_MAP_OFFSET
+    ; [&data,cap,key,offset,&it]
+    dup
+    retrieve
+    ; [&data,cap,key,offset,&it,full]
+    jumpz __hashmap_find_spot_empty
+    dup
+    add 1
+    retrieve
+    ; [&data,cap,key,offset,&it,it_key]
+    copy 4 ; key
+    sub
+    jumpz __hashmap_find_spot_found
+    ; [&data,cap,key,offset,&it]
+    pop
+    add 1
+    copy 2 ; cap
+    mod
+  jump __hashmap_find_spot_loop
+  label __hashmap_find_spot_empty
+    ; [&data,cap,key,offset,&it]
+    slide 4
+    push 0
+  ret
+  label __hashmap_find_spot_found
+  ; [&data,cap,key,offset,&it]
+  slide 4
+  push 1
+ret
+
+; args cap key
+; returns hash
+label __hashmap_get_hash
+  push 0
+  swap
+  ; [cap,res,key]
+  label __hashmap_get_hash_loop
+  dup
+  jumpz __hashmap_get_hash_done
+    ; res += key % cap
+    swap
+    copy 1
+    copy 3
+    mod
+    add
+    swap
+    ; [cap,res,key]
+    ; key /= cap
+    copy 2
+    div
+  jump __hashmap_get_hash_loop
+  label __hashmap_get_hash_done
+  pop
+  slide 1
+  ; mod operations are guaranteed to have the same sign as the modulo, which is cap, which is always positive.
+  ; no need for the following
+  ; dup
+  ; jumpn __hashmap_get_hash_negative
+  ;   ret
+  ; label __hashmap_get_hash_negative
+  ; push 0
+  ; swap
+  ; sub
+ret
+
+label lib_hashmap_end

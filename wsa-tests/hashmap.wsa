@@ -1,0 +1,29 @@
+include hashmap
+
+push 5
+call hashmap_new
+
+dup
+push 0
+push 0
+call hashmap_insert
+
+dup
+push 1
+push 0
+call hashmap_insert
+
+dup
+push 2
+push 0
+call hashmap_insert
+
+dup
+push 3
+push 0
+call hashmap_insert
+
+dup
+push 4
+push 0
+call hashmap_insert
