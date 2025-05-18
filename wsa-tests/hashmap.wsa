@@ -1,0 +1,85 @@
+include hashmap
+
+push 5
+call hashmap_new
+
+dup
+push 1
+push 0
+call hashmap_insert
+
+dup
+push 5
+push 1
+call hashmap_insert
+
+dup
+push 10
+push 2
+call hashmap_insert
+
+dup
+push 100
+push 3
+call hashmap_insert
+
+dup
+push 20
+push 4
+call hashmap_insert
+
+dup
+push 1
+call hashmap_get
+outn
+outn
+push 10
+outc
+
+dup
+push 5
+call hashmap_get
+outn
+outn
+push 10
+outc
+
+dup
+push 10
+call hashmap_get
+outn
+outn
+push 10
+outc
+
+dup
+push 100
+call hashmap_get
+outn
+outn
+push 10
+outc
+
+dup
+push 20
+call hashmap_get
+outn
+outn
+push 10
+outc
+
+dup
+call hashmap_get_size
+outn
+
+dup
+push 1
+call hashmap_remove
+
+dup
+push 20
+call hashmap_get
+outn
+outn
+push 10
+outc

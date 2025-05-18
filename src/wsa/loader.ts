@@ -8,6 +8,7 @@ import lib_memory_stack from "./lib/memory_stack.wsa?raw" with { type: "text" };
 import lib_rbtree from "./lib/rbtree.wsa?raw" with { type: "text" };
 import lib_slotmap from "./lib/slotmap.wsa?raw" with { type: "text" };
 import lib_vector from "./lib/vector.wsa?raw" with { type: "text" };
+import lib_hashmap from "./lib/hashmap.wsa?raw" with { type: "text" };
 import { Token, tokenizeLine } from "./tokens";
 
 const libraries: Record<string, string> = {
@@ -21,6 +22,7 @@ const libraries: Record<string, string> = {
   lib_memcontainer,
   lib_slotmap,
   lib_rbtree,
+  lib_hashmap
 };
 
 export type LineStream = (onLine: (line: string | null) => void) => () => void;
