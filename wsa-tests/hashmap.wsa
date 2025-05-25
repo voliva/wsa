@@ -71,6 +71,8 @@ outc
 dup
 call hashmap_get_size
 outn
+push 10
+outc
 
 dup
 push 1
@@ -83,3 +85,9 @@ outn
 outn
 push 10
 outc
+
+dup
+call hashmap_get_entries
+
+dup
+call vector_get_length

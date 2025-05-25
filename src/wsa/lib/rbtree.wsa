@@ -848,7 +848,7 @@ label __rbtree_find_extreme
 ret
 
 ; args &RB
-; returns &vec
+; returns &vec, Vec<[key,value]>
 label rbtree_get_sorted
   push 5
   call vector_new

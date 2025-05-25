@@ -1,5 +1,6 @@
 include memcontainer
 include memory
+include vector
 
 valueinteger __HASHMAP_MAP_OFFSET 2
 
@@ -198,7 +199,60 @@ ret
 label hashmap_remove
   ; removing can leave gaps, which means that following find could fail / stop early.
   ; after removing, every entry after the one removed must be relocated, until we find another gap.
-  ; TODO
+  copy 1
+  retrieve
+  swap
+  call __hashmap_find_spot
+  ; [&HM,&addr,found]
+  jumpz __hashmap_remove_end
+  ; mark slot as empty
+  dup
+  push 0
+  store
+  ; decrease size
+  copy 1
+  retrieve
+  add 1
+  dup
+  retrieve
+  sub 1
+  store
+  ; Check if next one has value
+  ; [&HM,&addr]
+  label __hashmap_remove_move_next
+  add 3
+  dup
+  retrieve
+  ; [&HM,&addr,found]
+  jumpz __hashmap_remove_end
+  ; Back-up key+value
+  copy 1 ; &HM will be useful later
+  copy 1
+  add 1
+  retrieve
+  ; [&HM,&addr,&HM,key]
+  copy 2
+  add 2
+  retrieve
+  ; [&HM,&addr,&HM,key,value]
+  ; mark as empty
+  copy 3
+  push 0
+  store
+  ; decrease size
+  copy 4
+  retrieve
+  add 1
+  dup
+  retrieve
+  sub 1
+  store
+  ; [&HM,&addr,&HM,key,value]
+  call hashmap_insert
+  jump __hashmap_remove_move_next
+  label __hashmap_remove_end
+  pop
+  pop
 ret
 
 ; args &HM
@@ -209,10 +263,55 @@ label hashmap_get_size
   retrieve
 ret
 
-; args &RB
-; returns &vec
+; args &HM
+; returns &vec, Vec<[key,value]>
 label hashmap_get_entries
-  ; TODO
+  retrieve
+  dup
+  add 1
+  retrieve
+  ; [&data,size]
+  mul 2
+  call vector_new
+  swap
+  ; [&vec, &data]
+  dup
+  add 1
+  retrieve
+  swap
+  add 2
+  swap
+  ; [&vec, &data, size]
+  label __hashmap_get_entries_loop
+  dup
+  jumpz __hashmap_get_entries_loop_end
+    swap
+    dup
+    retrieve
+    ; [&vec,size,&data,filled]
+    jumpz __hashmap_get_entries_empty
+      copy 2 ;&vec
+      copy 1 ;&data
+      add 1
+      retrieve
+      call vector_push
+      copy 2 ;&vec
+      copy 1 ;&data
+      add 2
+      retrieve
+      call vector_push
+      swap
+      sub 1
+      swap
+    label __hashmap_get_entries_empty
+    ; [&vec,size,&data]
+    add 3
+    swap
+  jump __hashmap_get_entries_loop
+  label __hashmap_get_entries_loop_end
+  ; [&vec, &data, 0]
+  pop
+  pop
 ret
 
 ; args &data key
